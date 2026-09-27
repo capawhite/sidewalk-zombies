@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#d6cdc0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Sidewalk Zombies" />
+  <title>Sidewalk Zombies</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;600;700&display=swap">
+</head>
+<body>
+  <div id="wrap">
+    <div id="hud">
+      <div class="top">
+        <div class="stat"><div class="k">Metres</div><div class="v" id="score">0</div></div>
+        <div class="stat" style="text-align:right"><div class="k">Composure</div><div id="lives"></div></div>
+      </div>
+      <div id="flash"></div>
+      <button id="shove" class="hide"><span id="shoveName">SHOVE</span><small>SPACE</small><div class="cool" id="cool" style="transform:scaleY(0)"></div></button>
+    </div>
+
+    <div class="screen" id="menu">
+      <div class="card">
+        <div class="eyebrow">Feel prototype · v0.1</div>
+        <h1>Sidewalk Zombies</h1>
+        <p class="tag">They're not undead. They're just texting in the cereal aisle. Weave through, grab a cart or a horn, and knock a path to the checkout.</p>
+        <div class="legend">
+          <div class="row"><span class="dot" style="background:var(--talk)"></span><div><b>Calling</b> — <span>phone on the ear, wandering left and right across the aisle.</span></div></div>
+          <div class="row"><span class="dot" style="background:var(--text)"></span><div><b>Texting</b> — <span>head down, walking straight at you. Easy to read, if you look.</span></div></div>
+          <div class="row"><span class="dot" style="background:var(--selfie)"></span><div><b>Filming</b> — <span>stopped dead in the middle of the aisle. A wall.</span></div></div>
+        </div>
+        <div class="keys">
+          <span><kbd>A</kbd> <kbd>D</kbd> or <kbd>&larr;</kbd> <kbd>&rarr;</kbd> weave</span><span class="sep">·</span>
+          <span><kbd>Space</kbd> knock</span><span class="sep">·</span>
+          <span>on phone: <b>drag</b> to steer, tap the button</span>
+        </div>
+        <button class="play" id="start">Hit the aisle →</button>
+        <p class="foot"><b>SHOVE</b> into the shelves. <b>CART</b> launches them. <b>HORN</b> scares them off. <b>GUN</b> sprays the aisle for 10s. <b>BOMB</b> clears everyone. Bumping someone cold costs composure.</p>
+      </div>
+    </div>
+
+    <div class="screen hide" id="over">
+      <div class="card">
+        <div class="eyebrow" id="verdict">Wiped out</div>
+        <h1 id="overTitle">Faceplant.</h1>
+        <p class="tag" id="overMsg">A filming influencer got you. Classic.</p>
+        <div class="final">
+          <div class="stat2"><div class="k">This run</div><div class="v" id="fScore">0</div></div>
+          <div class="stat2"><div class="k">Best</div><div class="v best" id="fBest">0</div></div>
+          <div class="stat2"><div class="k">Best combo</div><div class="v" id="fCombo">0</div></div>
+        </div>
+        <button class="play" id="again">Run it back →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
