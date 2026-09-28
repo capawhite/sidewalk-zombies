@@ -84,13 +84,14 @@ const GUN_SPEED = 38;
 const GUN_HIT_X = 0.95;
 const GUN_HIT_Z = 1.0;
 const GUN_STACK_MAX = 20;
-const GUN_PACK_GAP = 1.05;        // just a bit busier than a normal wave
+const GUN_PACK_MORE = 1.2;        // 20% more people while spraying
+const GUN_PACK_GAP = 1.05;
 const GUN_PACK_FILL = 2;          // a pair in front, not a wall
 const GUN_PACK_ROWS = 1;
 const GUN_PACK_ROW_Z = 1.15;
 const GUN_PACK_SQUEEZE = 0.5;     // pull them into the spray line
 const GUN_PACK_Z_JITTER = 0.4;
-const GUN_PACK_LANES = [1, 2];    // two center-left / center slots
+const GUN_PACK_LANES = [1, 2, 3]; // extra slot for the 20% third
 const GUN_CLEAR_NEAR = -5;        // already this close = blasted on pickup
 const GUN_START_INVULN = 0.45;
 
@@ -685,6 +686,7 @@ function spawnWave() {
   let fill = packing
     ? GUN_PACK_FILL
     : SPAWN_FILL_START + Math.floor(c * (SPAWN_FILL_END - SPAWN_FILL_START + 0.001));
+  if (packing && Math.random() < (GUN_PACK_MORE - 1)) fill += 1;
   if (!packing && Math.random() < c * 0.28) fill = Math.min(fill + 1, SPAWN_FILL_END);
   fill = Math.min(fill, 5);
   let chosen: number[];
