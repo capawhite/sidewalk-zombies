@@ -74,6 +74,7 @@ const POWERS: any = {
   gun:      { name: 'GUN',   yell: 'GUN!', cd: 0, reach: 0, halfW: 0, shake: 0.15 },
   bomb:     { name: 'BOMB',  yell: 'BOOM!', cd: 5, reach: 99, halfW: 99, shake: 0.8 },
 };
+const LIVES_MAX = 5;
 const TALK_DRIFT = 2.2;
 const TALK_DRIFT_RATE = 1.55;
 const CART_LAUNCH = 22;
@@ -426,7 +427,7 @@ function fireGun() {
 const S = { menu: 'menu', play: 'play', over: 'over' } as const;
 type StateT = typeof S[keyof typeof S];
 let state: StateT = S.menu;
-let dist = 0, speed = SPEED_START, lives = 3, combo = 0, bestCombo = 0, invuln = 0, shake = 0;
+let dist = 0, speed = SPEED_START, lives = LIVES_MAX, combo = 0, bestCombo = 0, invuln = 0, shake = 0;
 let shoveCd = 0, lastCd = POWERS.shoulder.cd, power = 'shoulder', cartRush = 0;
 let gunT = 0, gunCd = 0;
 let vx = 0, lean = 0, tapLeft = 0, tapRight = 0;
@@ -483,76 +484,117 @@ document.getElementById('again')!.addEventListener('click', start);
 
 // ---------- audio ----------
 let AC: AudioContext | null = null;
+let master: DynamicsCompressorNode | null = null;
+let noiseBuf: AudioBuffer | null = null;
+
 function audioResume() {
   try {
-    if (!AC) AC = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!AC) {
+      AC = new (window.AudioContext || (window as any).webkitAudioContext)();
+      master = AC.createDynamicsCompressor();
+      master.threshold.value = -16;
+      master.knee.value = 10;
+      master.ratio.value = 6;
+      master.attack.value = 0.003;
+      master.release.value = 0.14;
+      master.connect(AC.destination);
+      noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
     if (AC.state === 'suspended') AC.resume();
   } catch (e) {}
 }
-function blip(freq: number, dur: number, type: OscillatorType, vol: number) {
+function bus() { return master || AC!.destination; }
+
+function tone(freq: number, dur: number, type: OscillatorType, vol: number, when = 0, freqEnd?: number) {
   if (!AC) return;
-  try {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = type; o.frequency.value = freq;
-    g.gain.value = vol; o.connect(g); g.connect(AC.destination);
-    const t = AC.currentTime; g.gain.setValueAtTime(g.gain.value, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.start(t); o.stop(t + dur);
-  } catch (e) {}
+  const t = AC.currentTime + when;
+  const o = AC.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), t + dur);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(bus());
+  o.start(t); o.stop(t + dur + 0.03);
 }
-function slide(freq0: number, freq1: number, dur: number, type: OscillatorType, vol: number) {
-  if (!AC) return;
-  try {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = type;
-    const t = AC.currentTime;
-    o.frequency.setValueAtTime(freq0, t);
-    o.frequency.exponentialRampToValueAtTime(Math.max(1, freq1), t + dur);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(AC.destination);
-    o.start(t); o.stop(t + dur);
-  } catch (e) {}
+function burst(dur: number, vol: number, ffreq: number, when = 0, kind: BiquadFilterType = 'lowpass', ffreqEnd?: number, q = 1) {
+  if (!AC || !noiseBuf) return;
+  const t = AC.currentTime + when;
+  const src = AC.createBufferSource(); src.buffer = noiseBuf;
+  const f = AC.createBiquadFilter(); f.type = kind; f.Q.value = q;
+  f.frequency.setValueAtTime(ffreq, t);
+  if (ffreqEnd) f.frequency.exponentialRampToValueAtTime(Math.max(20, ffreqEnd), t + dur);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f); f.connect(g); g.connect(bus());
+  src.start(t); src.stop(t + dur + 0.03);
 }
-function noise(dur: number, vol: number, lp: number) {
-  if (!AC) return;
-  try {
-    const n = AC.createBuffer(1, Math.max(1, (AC.sampleRate * dur) | 0), AC.sampleRate);
-    const data = n.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-    const src = AC.createBufferSource(); src.buffer = n;
-    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp;
-    const g = AC.createGain();
-    const t = AC.currentTime;
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f); f.connect(g); g.connect(AC.destination);
-    src.start(t);
-  } catch (e) {}
+function echo(freq: number, dur: number, type: OscillatorType, vol: number, when: number, delay: number) {
+  tone(freq, dur, type, vol, when);
+  tone(freq * 0.97, dur * 0.85, type, vol * 0.45, when + delay);
 }
-function sfxShove() { noise(0.11, 0.16, 200); blip(88, 0.1, 'sine', 0.13); setTimeout(() => blip(54, 0.14, 'sine', 0.08), 35); }
+
+function sfxShove() {
+  burst(0.14, 0.2, 220, 0, 'lowpass', 70);
+  tone(72, 0.16, 'sine', 0.2);
+  tone(38, 0.22, 'sine', 0.12);
+  tone(180, 0.07, 'triangle', 0.06, 0.03, 90);
+}
 function sfxCart() {
-  noise(0.24, 0.14, 480);
-  slide(70, 260, 0.3, 'sawtooth', 0.09);
-  setTimeout(() => blip(540, 0.07, 'triangle', 0.06), 160);
-  setTimeout(() => blip(820, 0.1, 'triangle', 0.05), 240);
+  burst(0.08, 0.12, 3200, 0, 'bandpass', 1800, 4);
+  burst(0.07, 0.1, 2400, 0.05, 'bandpass', 1400, 5);
+  burst(0.28, 0.14, 280, 0, 'lowpass', 1800);
+  tone(90, 0.28, 'sawtooth', 0.07, 0, 280);
+  tone(620, 0.1, 'triangle', 0.07, 0.18);
+  tone(880, 0.12, 'triangle', 0.055, 0.26);
 }
 function sfxHorn() {
-  blip(350, 0.13, 'square', 0.13);
-  setTimeout(() => blip(250, 0.2, 'square', 0.14), 85);
-  setTimeout(() => { blip(920, 0.07, 'square', 0.05); slide(780, 420, 0.16, 'sawtooth', 0.04); }, 220);
+  tone(311, 0.14, 'square', 0.11);
+  tone(318, 0.14, 'square', 0.07);
+  tone(233, 0.22, 'square', 0.12, 0.12);
+  tone(239, 0.22, 'square', 0.07, 0.12);
+  echo(880, 0.1, 'sawtooth', 0.045, 0.28, 0.08);
+  tone(720, 0.16, 'sawtooth', 0.04, 0.32, 380);
+}
+function sfxGun() {
+  const j = Math.random();
+  burst(0.045, 0.09, 2200 + j * 800, 0, 'bandpass', 900, 3);
+  tone(190 + j * 40, 0.035, 'square', 0.055);
+  tone(90, 0.04, 'sine', 0.04);
+}
+function sfxBomb() {
+  burst(0.45, 0.28, 140, 0, 'lowpass', 40);
+  burst(0.12, 0.16, 900, 0.02, 'bandpass', 400, 2);
+  tone(56, 0.5, 'sine', 0.2, 0, 18);
+  tone(120, 0.18, 'sawtooth', 0.08, 0, 40);
+  burst(0.22, 0.1, 60, 0.12, 'lowpass', 30);
 }
 function sfxPickup(kind: string) {
-  if (kind === 'cart') { blip(440, 0.07, 'triangle', 0.06); setTimeout(() => blip(660, 0.1, 'triangle', 0.06), 70); }
-  else if (kind === 'gun') { blip(180, 0.05, 'square', 0.05); setTimeout(() => blip(240, 0.05, 'square', 0.05), 50); setTimeout(() => blip(300, 0.06, 'square', 0.05), 100); }
-  else if (kind === 'bomb') { blip(140, 0.1, 'sine', 0.07); setTimeout(() => blip(90, 0.16, 'sine', 0.08), 80); }
-  else { blip(520, 0.06, 'square', 0.055); setTimeout(() => blip(380, 0.08, 'square', 0.055), 75); }
+  if (kind === 'cart') { tone(523, 0.08, 'triangle', 0.07); tone(659, 0.09, 'triangle', 0.07, 0.07); tone(784, 0.12, 'triangle', 0.06, 0.14); }
+  else if (kind === 'gun') { burst(0.05, 0.08, 1800, 0, 'highpass'); tone(140, 0.06, 'square', 0.06); tone(210, 0.05, 'square', 0.05, 0.06); }
+  else if (kind === 'bomb') { tone(98, 0.12, 'sine', 0.09); tone(73, 0.18, 'sine', 0.08, 0.1); burst(0.1, 0.06, 400, 0.08, 'lowpass'); }
+  else { tone(494, 0.07, 'square', 0.06); tone(370, 0.1, 'square', 0.055, 0.08); }
 }
-function sfxGun() { noise(0.04, 0.08, 1800); blip(240, 0.04, 'square', 0.06); }
-function sfxBomb() { noise(0.35, 0.22, 280); slide(90, 28, 0.4, 'sawtooth', 0.14); setTimeout(() => noise(0.2, 0.1, 120), 80); }
-function sfxBump() { noise(0.1, 0.12, 150); blip(105, 0.12, 'square', 0.08); }
-function sfxNear(n: number) { blip(520 + Math.min(n, 15) * 30, 0.08, 'triangle', 0.05); }
-function sfxOver() { slide(240, 80, 0.35, 'sawtooth', 0.1); setTimeout(() => slide(150, 48, 0.4, 'sawtooth', 0.08), 120); }
+function sfxBump() {
+  burst(0.16, 0.18, 180, 0, 'lowpass', 60);
+  tone(140, 0.14, 'sine', 0.12, 0, 70);
+  tone(90, 0.2, 'triangle', 0.07, 0.04, 50);
+}
+function sfxNear(n: number) {
+  const f = 620 + Math.min(n, 12) * 28;
+  tone(f, 0.07, 'triangle', 0.055);
+  tone(f * 1.5, 0.09, 'sine', 0.03, 0.05);
+}
+function sfxOver() {
+  tone(220, 0.28, 'sawtooth', 0.1, 0, 70);
+  tone(160, 0.35, 'sawtooth', 0.08, 0.12, 42);
+  burst(0.3, 0.14, 200, 0.08, 'lowpass', 50);
+}
 function playPower(kind: string) {
   if (kind === 'cart') sfxCart();
   else if (kind === 'horn') sfxHorn();
@@ -567,7 +609,7 @@ const elScore = document.getElementById('score')!, elLives = document.getElement
   elCool = document.getElementById('cool')!, elShoveName = document.getElementById('shoveName')!;
 function drawLives() {
   elLives.innerHTML = '';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < LIVES_MAX; i++) {
     const h = document.createElement('div');
     h.className = 'heart' + (i >= lives ? ' gone' : '');
     elLives.appendChild(h);
@@ -735,7 +777,7 @@ function start() {
   audioResume();
   for (const z of pool) { z.active = false; z.visible = false; }
   for (const p of pickPool) { p.active = false; p.visible = false; }
-  dist = 0; speed = SPEED_START; lives = 3; combo = 0; bestCombo = 0; invuln = 0; shake = 0;
+  dist = 0; speed = SPEED_START; lives = LIVES_MAX; combo = 0; bestCombo = 0; invuln = 0; shake = 0;
   shoveCd = 0; lastCd = POWERS.shoulder.cd; cartRush = 0; scareT = 0; gunT = 0; gunCd = 0; scoreAcc = 0;
   for (const b of bullets) { b.active = false; b.visible = false; }
   spawnTimer = SPAWN_GAP_START; pickTimer = 2.2;

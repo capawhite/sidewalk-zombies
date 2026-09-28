@@ -31,8 +31,8 @@ img{max-width:100%;}
 .stat .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
 .stat .v{font-family:var(--font-display);font-weight:800;font-size:26px;
   font-variant-numeric:tabular-nums;margin-top:4px;}
-#lives{display:flex;gap:6px;align-items:center;height:26px;margin-top:4px;}
-.heart{width:18px;height:18px;background:var(--accent);
+#lives{display:flex;gap:4px;align-items:center;height:26px;margin-top:4px;}
+.heart{width:15px;height:15px;background:var(--accent);
   clip-path:path("M9 16.5C-2 9 3 1.5 9 6C15 1.5 20 9 9 16.5Z");
   transition:opacity .2s,transform .2s;}
 .heart.gone{opacity:.16;transform:scale(.7);}
