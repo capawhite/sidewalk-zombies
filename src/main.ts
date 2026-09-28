@@ -701,7 +701,7 @@ function spawnWave() {
     for (const s of chosen) {
       const r = Math.random();
       const type = packing
-        ? (r < 0.72 ? 'text' : r < 0.9 ? 'talk' : 'selfie')
+        ? 'text'
         : (r < 0.42 ? 'talk' : r < 0.75 ? 'text' : 'selfie');
       const x = packing ? slotsX[s] * GUN_PACK_SQUEEZE : slotsX[s];
       spawnZombie(x, type, SPAWN_Z + row * GUN_PACK_ROW_Z + Math.random() * jitter);
@@ -1056,13 +1056,13 @@ function tick(now: number) {
         continue;
       }
       z.position.z += speed * dt;
-      if (d.type === 'talk') {
+      if (d.type === 'talk' && gunT <= 0) {
         d.driftPhase += dt * TALK_DRIFT_RATE;
         z.position.x = d.baseX + Math.sin(d.driftPhase) * TALK_DRIFT;
         z.position.x = clamp(z.position.x, -CLAMP_X, CLAMP_X);
         z.rotation.y = Math.sin(d.driftPhase) * 0.45;
         d.head.rotation.set(0.02, 0.06, 0.1 + Math.sin(now * 0.008) * 0.04);
-      } else if (d.type === 'text') {
+      } else if (d.type === 'text' || d.type === 'talk') {
         z.position.x = d.baseX;
         z.rotation.y = 0;
       }
