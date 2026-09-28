@@ -59,6 +59,10 @@ img{max-width:100%;}
 #shove .cool{position:absolute;inset:0;background:rgba(10,12,15,.68);transform-origin:bottom;}
 #shove small{display:block;font-family:var(--font-ui);font-weight:600;font-size:10px;
   opacity:.85;letter-spacing:.1em;margin-top:2px;}
+#shoveQ{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;
+  border-radius:11px;background:#14181e;border:1px solid var(--line);color:#fff;
+  font-family:var(--font-ui);font-weight:700;font-size:10px;letter-spacing:.04em;
+  line-height:20px;box-shadow:0 4px 10px rgba(0,0,0,.35);}
 .hide{display:none!important;}
 
 .screen{position:absolute;inset:0;display:grid;place-items:center;padding:24px;

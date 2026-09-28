@@ -84,6 +84,13 @@ const GUN_RATE = 0.11;
 const GUN_SPEED = 38;
 const GUN_HIT_X = 0.75;
 const GUN_HIT_Z = 0.85;
+const GUN_STACK_MAX = 20;
+const GUN_PACK_GAP = 0.36;        // waves while spraying
+const GUN_PACK_FILL = 5;          // occupy every lane
+const GUN_PACK_ROWS = 2;          // two tight rows per wave
+const GUN_PACK_ROW_Z = 1.15;      // spacing between pack rows
+const GUN_PACK_SQUEEZE = 0.68;    // pull lanes toward the spray line
+const GUN_PACK_Z_JITTER = 0.35;
 
 function clamp(v: number, lo: number, hi: number) {
   return v < lo ? lo : v > hi ? hi : v;
@@ -430,6 +437,7 @@ let state: StateT = S.menu;
 let dist = 0, speed = SPEED_START, lives = LIVES_MAX, combo = 0, bestCombo = 0, invuln = 0, shake = 0;
 let shoveCd = 0, lastCd = POWERS.shoulder.cd, power = 'shoulder', cartRush = 0;
 let gunT = 0, gunCd = 0;
+const powerQ: string[] = [];
 let vx = 0, lean = 0, tapLeft = 0, tapRight = 0;
 let pointerActive = false, pointerX = 0, pointerOriginX = 0, touchAnchorX = 0;
 let pointerLastX = 0, pointerLastT = 0, pointerFlick = 0;
@@ -606,7 +614,8 @@ function playPower(kind: string) {
 // ---------- HUD ----------
 const elScore = document.getElementById('score')!, elLives = document.getElementById('lives')!,
   elFlash = document.getElementById('flash')!, elShove = document.getElementById('shove')!,
-  elCool = document.getElementById('cool')!, elShoveName = document.getElementById('shoveName')!;
+  elCool = document.getElementById('cool')!, elShoveName = document.getElementById('shoveName')!,
+  elShoveHint = document.getElementById('shoveHint')!, elShoveQ = document.getElementById('shoveQ')!;
 function drawLives() {
   elLives.innerHTML = '';
   for (let i = 0; i < LIVES_MAX; i++) {
@@ -619,39 +628,80 @@ function flash(msg: string, color: string) {
   elFlash.textContent = msg; elFlash.style.color = color;
   elFlash.classList.remove('show'); void (elFlash as HTMLElement).offsetWidth; elFlash.classList.add('show');
 }
-function setPower(next: string) {
-  power = next;
-  elShoveName.textContent = POWERS[power].name;
+function peekPower(): string {
+  return gunT > 0 ? 'gun' : (powerQ[0] || 'shoulder');
+}
+function waitingPower(): string {
+  return powerQ[gunT > 0 ? 0 : 1] || '';
+}
+function refreshPowerHud() {
+  power = peekPower();
+  if (gunT <= 0) elShoveName.textContent = POWERS[power].name;
   elShove.classList.remove('power-cart', 'power-horn', 'power-gun', 'power-bomb');
   if (power === 'cart') elShove.classList.add('power-cart');
   if (power === 'horn') elShove.classList.add('power-horn');
-  if (power === 'gun' || gunT > 0) elShove.classList.add('power-gun');
+  if (power === 'gun') elShove.classList.add('power-gun');
   if (power === 'bomb') elShove.classList.add('power-bomb');
+  const wait = waitingPower();
+  elShoveHint.textContent = wait ? 'THEN ' + POWERS[wait].name : 'SPACE';
+  const held = powerQ.length + (gunT > 0 ? 1 : 0);
+  if (held > 1) {
+    elShoveQ.textContent = '+' + (held - 1);
+    elShoveQ.classList.remove('hide');
+  } else elShoveQ.classList.add('hide');
   cartProp.visible = power === 'cart' || cartRush > 0;
   gunProp.visible = power === 'gun' || gunT > 0;
+}
+function setPower(next: string) {
+  powerQ.length = 0;
+  if (next !== 'shoulder' && next !== 'gun') powerQ.push(next);
+  refreshPowerHud();
+}
+function queuePower(kind: string) {
+  if (kind === 'gun') {
+    startGun(gunT > 0);
+    return;
+  }
+  powerQ.push(kind);
+  refreshPowerHud();
+  const hex = '#' + PICK_COL[kind].toString(16).padStart(6, '0');
+  if (gunT > 0 || powerQ.length > 1) flash(POWERS[kind].name + ' QUEUED', hex);
+  else flash(POWERS[kind].name + ' READY', hex);
+}
+function consumeReadyPower() {
+  if (powerQ[0] === power) powerQ.shift();
+  refreshPowerHud();
 }
 
 // ---------- spawning ----------
 function spawnWave() {
+  const packing = gunT > 0;
   const diff = Math.min(dist / SPEED_RAMP_DIST, 1);
-  let fill = 1 + Math.floor(Math.random() * (1 + diff * 2.2));
-  fill = Math.min(fill, 4);
+  let fill = packing ? GUN_PACK_FILL : 1 + Math.floor(Math.random() * (1 + diff * 2.2));
+  fill = Math.min(fill, 5);
   const idx = [0, 1, 2, 3, 4];
   for (let i = idx.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[idx[i], idx[j]] = [idx[j], idx[i]]; }
   const chosen = idx.slice(0, fill);
-  for (const s of chosen) {
-    const r = Math.random();
-    const type = r < 0.42 - diff * 0.1 ? 'talk' : r < 0.75 ? 'text' : 'selfie';
-    spawnZombie(slotsX[s], type);
+  const rows = packing ? GUN_PACK_ROWS : 1;
+  const jitter = packing ? GUN_PACK_Z_JITTER : 3;
+  for (let row = 0; row < rows; row++) {
+    for (const s of chosen) {
+      const r = Math.random();
+      const type = packing
+        ? (r < 0.72 ? 'text' : r < 0.9 ? 'talk' : 'selfie')
+        : (r < 0.42 - diff * 0.1 ? 'talk' : r < 0.75 ? 'text' : 'selfie');
+      const x = packing ? slotsX[s] * GUN_PACK_SQUEEZE : slotsX[s];
+      spawnZombie(x, type, SPAWN_Z + row * GUN_PACK_ROW_Z + Math.random() * jitter);
+    }
   }
 }
-function spawnZombie(x: number, type: string) {
+function spawnZombie(x: number, type: string, zPos?: number) {
   const z = getZombie(); const def = TYPES[type];
   z.active = true; z.visible = true; z.userData.type = type; z.userData.def = def;
   z.userData.hit = false; z.userData.passed = false; z.userData.knocked = false; z.userData.tripT = 0;
   z.userData.driftPhase = Math.random() * 6.28; z.userData.baseX = x;
   z.userData.knockVx = 0; z.userData.knockVy = 0; z.userData.fx = '';
-  z.position.set(x, 0, SPAWN_Z + Math.random() * 3);
+  z.position.set(x, 0, zPos ?? (SPAWN_Z + Math.random() * 3));
   z.rotation.set(0, 0, 0);
   (z.userData.body.material as THREE.MeshLambertMaterial).color.setHex(def.color);
   applyPose(z, type);
@@ -697,11 +747,16 @@ function knockOff(z: any, dx: number, fx: string) {
   }
   if (d.phone) d.phone.visible = false;
 }
-function startGun() {
+function startGun(stack = false) {
   audioResume();
-  gunT = GUN_DURATION; gunCd = 0;
-  setPower('gun');
-  flash('GUN ' + GUN_DURATION + 's', '#ff8a2a');
+  if (stack && gunT > 0) {
+    gunT = Math.min(gunT + GUN_DURATION, GUN_STACK_MAX);
+    flash('GUN +' + GUN_DURATION + 's', '#ff8a2a');
+  } else {
+    gunT = GUN_DURATION; gunCd = 0;
+    flash('GUN ' + GUN_DURATION + 's', '#ff8a2a');
+  }
+  refreshPowerHud();
 }
 function detonate() {
   audioResume();
@@ -722,7 +777,7 @@ function detonate() {
   } else flash('BOOM!', '#ff4466');
   shake = Math.min(shake + 0.85, 1);
   shoveCd = POWERS.bomb.cd; lastCd = POWERS.bomb.cd;
-  setPower('shoulder');
+  consumeReadyPower();
 }
 function doShove() {
   if (state !== S.play) return;
@@ -756,7 +811,7 @@ function doShove() {
     score(got * 15);
   }
   shake = Math.min(shake + p.shake, 0.85);
-  if (power !== 'shoulder') setPower('shoulder');
+  if (power !== 'shoulder') consumeReadyPower();
   cartProp.visible = cartRush > 0;
 }
 function score(n: number) { scoreAcc += n; }
@@ -779,6 +834,7 @@ function start() {
   for (const p of pickPool) { p.active = false; p.visible = false; }
   dist = 0; speed = SPEED_START; lives = LIVES_MAX; combo = 0; bestCombo = 0; invuln = 0; shake = 0;
   shoveCd = 0; lastCd = POWERS.shoulder.cd; cartRush = 0; scareT = 0; gunT = 0; gunCd = 0; scoreAcc = 0;
+  powerQ.length = 0;
   for (const b of bullets) { b.active = false; b.visible = false; }
   spawnTimer = SPAWN_GAP_START; pickTimer = 2.2;
   spawnWave();
@@ -795,7 +851,7 @@ function start() {
 }
 function gameOver(cause: string) {
   state = S.over; elShove.classList.add('hide');
-  cartProp.visible = false; gunProp.visible = false; gunT = 0;
+  cartProp.visible = false; gunProp.visible = false; gunT = 0; powerQ.length = 0;
   const total = Math.floor(dist) + scoreAcc;
   if (total > best) { best = total; try { localStorage.setItem('sz_best', String(best)); } catch (e) {} }
   document.getElementById('fScore')!.textContent = String(total);
@@ -864,7 +920,9 @@ function tick(now: number) {
     spawnTimer -= dt;
     if (spawnTimer <= 0) {
       spawnWave();
-      spawnTimer = SPAWN_GAP_START - diff * (SPAWN_GAP_START - SPAWN_GAP_END) + Math.random() * 0.25;
+      spawnTimer = gunT > 0
+        ? GUN_PACK_GAP + Math.random() * 0.08
+        : SPAWN_GAP_START - diff * (SPAWN_GAP_START - SPAWN_GAP_END) + Math.random() * 0.25;
     }
     pickTimer -= dt;
     if (pickTimer <= 0) {
@@ -876,10 +934,16 @@ function tick(now: number) {
     if (gunT > 0) {
       gunT -= dt; gunCd -= dt;
       elShoveName.textContent = 'GUN ' + Math.max(0, Math.ceil(gunT));
-      (elCool as HTMLElement).style.transform = 'scaleY(' + (1 - gunT / GUN_DURATION) + ')';
+      (elCool as HTMLElement).style.transform = 'scaleY(' + (1 - Math.min(1, gunT / GUN_DURATION)) + ')';
       gunProp.visible = true;
       if (gunCd <= 0) { fireGun(); gunCd = GUN_RATE; }
-      if (gunT <= 0) { gunT = 0; setPower('shoulder'); }
+      if (gunT <= 0) {
+        gunT = 0;
+        refreshPowerHud();
+        if (power !== 'shoulder') {
+          flash(POWERS[power].name + ' READY', '#' + PICK_COL[power].toString(16).padStart(6, '0'));
+        }
+      }
     } else {
       (elCool as HTMLElement).style.transform = 'scaleY(' + shoveCd / lastCd + ')';
     }
@@ -918,11 +982,7 @@ function tick(now: number) {
         pk.active = false; pk.visible = false;
         const kind = pk.userData.kind;
         sfxPickup(kind);
-        if (kind === 'gun') startGun();
-        else {
-          setPower(kind);
-          flash(POWERS[kind].name + ' READY', '#' + PICK_COL[kind].toString(16).padStart(6, '0'));
-        }
+        queuePower(kind);
       }
     }
 
