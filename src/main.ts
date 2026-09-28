@@ -360,13 +360,13 @@ function applyPose(z: any, type: string) {
     d.lArm.rotation.set(0.15, 0, 0.22);
     if (d.phone) { d.phone.position.set(0.05, 0.05, 0.02); d.phone.rotation.set(0.5, 1.15, 1.35); }
   } else if (type === 'text') {
-    if (d.upper) d.upper.rotation.x = 0.78;
-    d.head.rotation.set(-0.62, 0.08, 0);
-    d.rArm.rotation.set(-0.55, 0.15, -0.25);
-    if (rLow) rLow.rotation.set(-1.35, 0, 0);
-    d.lArm.rotation.set(-0.5, -0.1, 0.3);
-    if (lLow) lLow.rotation.set(-1.15, 0, 0);
-    if (d.phone) { d.phone.position.set(0.02, -0.04, 0.1); d.phone.rotation.set(-0.8, 0.2, 0.15); }
+    if (d.upper) d.upper.rotation.x = 0;
+    d.head.rotation.set(-0.78, 0.05, 0);
+    d.rArm.rotation.set(-1.05, 0.22, -0.32);
+    if (rLow) rLow.rotation.set(-1.2, 0, 0.12);
+    d.lArm.rotation.set(-0.98, -0.18, 0.38);
+    if (lLow) lLow.rotation.set(-1.1, 0, -0.08);
+    if (d.phone) { d.phone.position.set(0.02, -0.02, 0.08); d.phone.rotation.set(-0.45, 0.18, 0.12); }
   } else {
     if (d.upper) d.upper.rotation.x = -0.08;
     d.head.rotation.set(0.12, 0, 0);
