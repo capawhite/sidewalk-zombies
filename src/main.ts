@@ -99,7 +99,7 @@ const GUN_PACK_Z_JITTER = 0.4;
 const GUN_PACK_LANES = [1, 2, 3]; // extra slot for the 20% third
 const GUN_CLEAR_NEAR = -5;        // already this close = blasted on pickup
 const GUN_START_INVULN = 0.45;
-const LEVEL2_AT = 250;            // total score to clear the aisle
+const LEVEL2_AT = 500;            // total score to clear the aisle
 const LEVEL_CLEAR_T = 3.4;
 const LIVES_CAP = 6;
 const INF_DRIFT = 1.9;
