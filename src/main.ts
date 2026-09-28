@@ -68,8 +68,8 @@ const SEG_LEN = 20, SEG_N = 10, WORLD_BACK = -SEG_N * SEG_LEN;
 
 const POWERS: any = {
   shoulder: { name: 'SHOVE', yell: 'SHOVE!', cd: 2.4, reach: 8, halfW: 2.2, shake: 0.28 },
-  cart:     { name: 'CART',  yell: 'LAUNCH!', cd: 4.2, reach: 14, halfW: 4.4, shake: 0.5, rush: 1.5 },
-  horn:     { name: 'HORN',  yell: 'SCATTER!', cd: 3.6, reach: 10, halfW: 7.2, shake: 0.35, radial: true },
+  cart:     { name: 'BAT',   yell: 'WHACK!', cd: 4.2, reach: 14, halfW: 4.4, shake: 0.5, rush: 1.5 },
+  horn:     { name: 'HORN',  yell: 'HONK!', cd: 3.6, reach: 10, halfW: 7.2, shake: 0.35, radial: true },
   gun:      { name: 'GUN',   yell: 'GUN!', cd: 0, reach: 0, halfW: 0, shake: 0.15 },
   bomb:     { name: 'BOMB',  yell: 'BOOM!', cd: 5, reach: 99, halfW: 99, shake: 0.8 },
 };
@@ -307,17 +307,55 @@ const player: any = makePerson(COL.player, true);
 player.position.set(0, 0, 6.5);
 scene.add(player);
 
-const cartProp = new THREE.Group();
-{
-  const bask = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.85), mat(0xb8c0c6, { transparent: true, opacity: 0.35 }));
-  bask.position.set(0, 0.85, 0.7); cartProp.add(bask);
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.05, 0.9), mat(0x8a9298));
-  rim.position.set(0, 1.08, 0.7); cartProp.add(rim);
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.08), mat(0x8a9298));
-  bar.position.set(0.28, 0.7, 1.05); cartProp.add(bar);
+function makeBatModel() {
+  const g = new THREE.Group();
+  const metal = mat(0xd8e2ea);
+  const tape = mat(0x2a241c);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.048, 8, 6), tape);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.038, 0.32, 8), tape);
+  handle.position.y = 0.18;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.07, 0.36, 8), metal);
+  shaft.position.y = 0.51;
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.074, 0.52, 8), metal);
+  barrel.position.y = 0.94;
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.074, 8, 6), metal);
+  cap.position.y = 1.19;
+  const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.045, 8), mat(0x3d8ec9));
+  stripe.position.y = 0.76;
+  g.add(knob); g.add(handle); g.add(shaft); g.add(barrel); g.add(cap); g.add(stripe);
+  [knob, handle, shaft, barrel, cap, stripe].forEach((m) => { m.castShadow = true; });
+  return g;
 }
-player.add(cartProp);
-cartProp.visible = false;
+function makeHornModel() {
+  const g = new THREE.Group();
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), mat(0xe23b2f));
+  bulb.position.set(-0.2, 0, 0);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 0.13, 8), mat(0x1a1a1a));
+  neck.rotation.z = Math.PI / 2;
+  neck.position.set(-0.04, 0, 0);
+  const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.05, 0.3, 12), mat(0xffd24a));
+  bell.rotation.z = Math.PI / 2;
+  bell.position.set(0.18, 0, 0);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.028, 6, 14), mat(0xffe27a));
+  lip.rotation.y = Math.PI / 2;
+  lip.position.set(0.33, 0, 0);
+  g.add(bulb); g.add(neck); g.add(bell); g.add(lip);
+  [bulb, neck, bell, lip].forEach((m) => { m.castShadow = true; });
+  return g;
+}
+
+const batProp = makeBatModel();
+batProp.position.set(0.36, 0.7, 0.18);
+batProp.rotation.set(-0.95, 0.2, -0.55);
+player.add(batProp);
+batProp.visible = false;
+
+const hornProp = makeHornModel();
+hornProp.scale.setScalar(0.55);
+hornProp.position.set(0.32, 1.28, 0.28);
+hornProp.rotation.set(0.15, -0.4, 0.35);
+player.add(hornProp);
+hornProp.visible = false;
 
 const gunProp = new THREE.Group();
 {
@@ -325,6 +363,8 @@ const gunProp = new THREE.Group();
   body.position.set(0.22, 1.2, 0.35); gunProp.add(body);
   const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.38), mat(0x555555));
   barrel.position.set(0.22, 1.22, 0.05); gunProp.add(barrel);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.22, 0.12), mat(0x1a1a1a));
+  grip.position.set(0.22, 1.04, 0.42); gunProp.add(grip);
 }
 player.add(gunProp);
 gunProp.visible = false;
@@ -387,28 +427,31 @@ function getZombie(): any {
 const pickPool: any[] = [];
 function makePickupMesh() {
   const g: any = new THREE.Group();
-  const cart = new THREE.Group();
-  const bask = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.7), mat(0x7fd0ff, { transparent: true, opacity: 0.55 }));
-  bask.position.y = 0.55; cart.add(bask);
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 0.74), mat(0xe8f6ff));
-  rim.position.y = 0.76; cart.add(rim);
-  const horn = new THREE.Group();
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.45, 8), mat(0xffd24a));
-  cone.position.y = 0.7; cone.rotation.x = 0.5; horn.add(cone);
+  const bat = makeBatModel();
+  bat.scale.setScalar(0.72);
+  bat.position.y = 0.08;
+  bat.rotation.set(0.15, 0.6, 0.22);
+  const horn = makeHornModel();
+  horn.position.y = 0.58;
+  horn.rotation.y = 0.35;
   const gun = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.55), mat(0x3a3a3a));
   body.position.set(0, 0.62, 0); gun.add(body);
   const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.45), mat(0x6a6a6a));
   barrel.position.set(0, 0.66, -0.35); gun.add(barrel);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.24, 0.14), mat(0x1a1a1a));
+  grip.position.set(0, 0.44, 0.16); gun.add(grip);
   const bomb = new THREE.Group();
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(0x2a2a2a));
   ball.position.y = 0.55; bomb.add(ball);
   const fuse = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, 0.04), mat(0xff4466));
   fuse.position.y = 0.82; bomb.add(fuse);
+  const spark = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), mat(0xffee66));
+  spark.position.y = 0.94; bomb.add(spark);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.04, 8, 16), mat(0xffee88));
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.08;
-  g.add(cart); g.add(horn); g.add(gun); g.add(bomb); g.add(ring);
-  g.userData.cartVis = cart; g.userData.hornVis = horn;
+  g.add(bat); g.add(horn); g.add(gun); g.add(bomb); g.add(ring);
+  g.userData.cartVis = bat; g.userData.hornVis = horn;
   g.userData.gunVis = gun; g.userData.bombVis = bomb; g.userData.ring = ring;
   return g;
 }
@@ -557,12 +600,10 @@ function sfxShove() {
   tone(180, 0.07, 'triangle', 0.06, 0.03, 90);
 }
 function sfxCart() {
-  burst(0.08, 0.12, 3200, 0, 'bandpass', 1800, 4);
-  burst(0.07, 0.1, 2400, 0.05, 'bandpass', 1400, 5);
-  burst(0.28, 0.14, 280, 0, 'lowpass', 1800);
-  tone(90, 0.28, 'sawtooth', 0.07, 0, 280);
-  tone(620, 0.1, 'triangle', 0.07, 0.18);
-  tone(880, 0.12, 'triangle', 0.055, 0.26);
+  burst(0.09, 0.18, 380, 0, 'lowpass', 90);
+  burst(0.06, 0.16, 2600, 0.02, 'bandpass', 700, 3);
+  tone(110, 0.12, 'sawtooth', 0.1);
+  tone(55, 0.2, 'sine', 0.14);
 }
 function sfxHorn() {
   tone(311, 0.14, 'square', 0.11);
@@ -586,7 +627,7 @@ function sfxBomb() {
   burst(0.22, 0.1, 60, 0.12, 'lowpass', 30);
 }
 function sfxPickup(kind: string) {
-  if (kind === 'cart') { tone(523, 0.08, 'triangle', 0.07); tone(659, 0.09, 'triangle', 0.07, 0.07); tone(784, 0.12, 'triangle', 0.06, 0.14); }
+  if (kind === 'cart') { tone(196, 0.08, 'triangle', 0.08); tone(247, 0.1, 'triangle', 0.07, 0.07); burst(0.06, 0.08, 900, 0.04, 'bandpass'); }
   else if (kind === 'gun') { burst(0.05, 0.08, 1800, 0, 'highpass'); tone(140, 0.06, 'square', 0.06); tone(210, 0.05, 'square', 0.05, 0.06); }
   else if (kind === 'bomb') { tone(98, 0.12, 'sine', 0.09); tone(73, 0.18, 'sine', 0.08, 0.1); burst(0.1, 0.06, 400, 0.08, 'lowpass'); }
   else { tone(494, 0.07, 'square', 0.06); tone(370, 0.1, 'square', 0.055, 0.08); }
@@ -652,7 +693,8 @@ function refreshPowerHud() {
     elShoveQ.textContent = '+' + (held - 1);
     elShoveQ.classList.remove('hide');
   } else elShoveQ.classList.add('hide');
-  cartProp.visible = power === 'cart' || cartRush > 0;
+  batProp.visible = power === 'cart' || cartRush > 0;
+  hornProp.visible = power === 'horn';
   gunProp.visible = power === 'gun' || gunT > 0;
 }
 function setPower(next: string) {
@@ -856,7 +898,7 @@ function doShove() {
   }
   shake = Math.min(shake + p.shake, 0.85);
   if (power !== 'shoulder') consumeReadyPower();
-  cartProp.visible = cartRush > 0;
+  batProp.visible = cartRush > 0;
 }
 function score(n: number) { scoreAcc += n; }
 
@@ -895,7 +937,7 @@ function start() {
 }
 function gameOver(cause: string) {
   state = S.over; elShove.classList.add('hide');
-  cartProp.visible = false; gunProp.visible = false; gunT = 0; powerQ.length = 0;
+  batProp.visible = false; hornProp.visible = false; gunProp.visible = false; gunT = 0; powerQ.length = 0;
   const total = Math.floor(dist) + scoreAcc;
   if (total > best) { best = total; try { localStorage.setItem('sz_best', String(best)); } catch (e) {} }
   document.getElementById('fScore')!.textContent = String(total);
@@ -953,7 +995,8 @@ function tick(now: number) {
     player.rotation.z = -lean * STEER_LEAN;
     player.rotation.y = lean * STEER_YAW;
     gait(player, now * 0.014, 0.55);
-    cartProp.visible = power === 'cart' || cartRush > 0;
+    batProp.visible = power === 'cart' || cartRush > 0;
+    hornProp.visible = power === 'horn';
 
     for (const s of scroll) {
       s.position.z += speed * dt;
