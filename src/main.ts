@@ -54,12 +54,11 @@ const CAM_FOLLOW_RATE = 6;
 const FOG_NEAR = 28;
 const FOG_FAR = 72;
 
-const SPEED_START = 6.5;          // was 16 — a walk, not a sprint
-const SPEED_MAX = 11;             // was 38
-const SPEED_RAMP_DIST = 380;      // metres to reach max
-const SPAWN_FIRST = 0.2;          // first wave almost immediately
-const SPAWN_GAP_START = 1.1;
-const SPAWN_GAP_END = 0.75;
+const SPEED = 6.5;                // walk stays put — crowd is the ramp
+const CROWD_RAMP_DIST = 560;      // metres to go from 1 person to a full wave
+const SPAWN_FILL_START = 1;
+const SPAWN_FILL_END = 4;
+const SPAWN_GAP = 1.1;
 const SPAWN_Z = -18;              // appear just ahead in the fog (was -200)
 
 const AISLE_W = 9.4;
@@ -434,7 +433,7 @@ function fireGun() {
 const S = { menu: 'menu', play: 'play', over: 'over' } as const;
 type StateT = typeof S[keyof typeof S];
 let state: StateT = S.menu;
-let dist = 0, speed = SPEED_START, lives = LIVES_MAX, combo = 0, bestCombo = 0, invuln = 0, shake = 0;
+let dist = 0, speed = SPEED, lives = LIVES_MAX, combo = 0, bestCombo = 0, invuln = 0, shake = 0;
 let shoveCd = 0, lastCd = POWERS.shoulder.cd, power = 'shoulder', cartRush = 0;
 let gunT = 0, gunCd = 0;
 const powerQ: string[] = [];
@@ -674,10 +673,16 @@ function consumeReadyPower() {
 }
 
 // ---------- spawning ----------
+function crowd(): number {
+  return Math.min(dist / CROWD_RAMP_DIST, 1);
+}
 function spawnWave() {
   const packing = gunT > 0;
-  const diff = Math.min(dist / SPEED_RAMP_DIST, 1);
-  let fill = packing ? GUN_PACK_FILL : 1 + Math.floor(Math.random() * (1 + diff * 2.2));
+  const c = crowd();
+  let fill = packing
+    ? GUN_PACK_FILL
+    : SPAWN_FILL_START + Math.floor(c * (SPAWN_FILL_END - SPAWN_FILL_START + 0.001));
+  if (!packing && Math.random() < c * 0.28) fill = Math.min(fill + 1, SPAWN_FILL_END);
   fill = Math.min(fill, 5);
   const idx = [0, 1, 2, 3, 4];
   for (let i = idx.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[idx[i], idx[j]] = [idx[j], idx[i]]; }
@@ -689,7 +694,7 @@ function spawnWave() {
       const r = Math.random();
       const type = packing
         ? (r < 0.72 ? 'text' : r < 0.9 ? 'talk' : 'selfie')
-        : (r < 0.42 - diff * 0.1 ? 'talk' : r < 0.75 ? 'text' : 'selfie');
+        : (r < 0.42 ? 'talk' : r < 0.75 ? 'text' : 'selfie');
       const x = packing ? slotsX[s] * GUN_PACK_SQUEEZE : slotsX[s];
       spawnZombie(x, type, SPAWN_Z + row * GUN_PACK_ROW_Z + Math.random() * jitter);
     }
@@ -832,11 +837,11 @@ function start() {
   audioResume();
   for (const z of pool) { z.active = false; z.visible = false; }
   for (const p of pickPool) { p.active = false; p.visible = false; }
-  dist = 0; speed = SPEED_START; lives = LIVES_MAX; combo = 0; bestCombo = 0; invuln = 0; shake = 0;
+  dist = 0; speed = SPEED; lives = LIVES_MAX; combo = 0; bestCombo = 0; invuln = 0; shake = 0;
   shoveCd = 0; lastCd = POWERS.shoulder.cd; cartRush = 0; scareT = 0; gunT = 0; gunCd = 0; scoreAcc = 0;
   powerQ.length = 0;
   for (const b of bullets) { b.active = false; b.visible = false; }
-  spawnTimer = SPAWN_GAP_START; pickTimer = 2.2;
+  spawnTimer = SPAWN_GAP; pickTimer = 2.2;
   spawnWave();
   vx = 0; lean = 0; tapLeft = 0; tapRight = 0;
   pointerActive = false; pointerFlick = 0; touchAnchorX = 0;
@@ -876,8 +881,7 @@ function tick(now: number) {
   if (dt > 0.05) dt = 0.05;
 
   if (state === S.play) {
-    const diff = Math.min(dist / SPEED_RAMP_DIST, 1);
-    speed = SPEED_START + (SPEED_MAX - SPEED_START) * diff;
+    speed = SPEED;
     dist += speed * dt;
     elScore.textContent = String(Math.floor(dist) + scoreAcc);
 
@@ -922,12 +926,12 @@ function tick(now: number) {
       spawnWave();
       spawnTimer = gunT > 0
         ? GUN_PACK_GAP + Math.random() * 0.08
-        : SPAWN_GAP_START - diff * (SPAWN_GAP_START - SPAWN_GAP_END) + Math.random() * 0.25;
+        : SPAWN_GAP + Math.random() * 0.2;
     }
     pickTimer -= dt;
     if (pickTimer <= 0) {
       spawnPickup();
-      pickTimer = 6.5 - diff * 2 + Math.random() * 2;
+      pickTimer = 6.5 + Math.random() * 2;
     }
 
     if (shoveCd > 0) { shoveCd -= dt; if (shoveCd < 0) shoveCd = 0; }
