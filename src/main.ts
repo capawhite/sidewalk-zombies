@@ -84,13 +84,15 @@ const GUN_SPEED = 38;
 const GUN_HIT_X = 0.95;
 const GUN_HIT_Z = 1.0;
 const GUN_STACK_MAX = 20;
-const GUN_PACK_GAP = 0.78;        // leave time to hose the clump
-const GUN_PACK_FILL = 3;          // a small pack, not a wall
+const GUN_PACK_GAP = 1.05;        // just a bit busier than a normal wave
+const GUN_PACK_FILL = 2;          // a pair in front, not a wall
 const GUN_PACK_ROWS = 1;
 const GUN_PACK_ROW_Z = 1.15;
-const GUN_PACK_SQUEEZE = 0.55;    // pull them into the spray line
+const GUN_PACK_SQUEEZE = 0.5;     // pull them into the spray line
 const GUN_PACK_Z_JITTER = 0.4;
-const GUN_PACK_LANES = [1, 2, 3]; // center three slots only
+const GUN_PACK_LANES = [1, 2];    // two center-left / center slots
+const GUN_CLEAR_NEAR = -5;        // already this close = blasted on pickup
+const GUN_START_INVULN = 0.45;
 
 function clamp(v: number, lo: number, hi: number) {
   return v < lo ? lo : v > hi ? hi : v;
@@ -758,6 +760,33 @@ function knockOff(z: any, dx: number, fx: string) {
   }
   if (d.phone) d.phone.visible = false;
 }
+function thinForGun() {
+  const live: any[] = [];
+  for (const z of pool) {
+    if (!z.active || z.userData.knocked) continue;
+    live.push(z);
+  }
+  live.sort((a, b) => b.position.z - a.position.z);
+  let kept = 0;
+  let got = 0;
+  for (const z of live) {
+    const close = z.position.z > GUN_CLEAR_NEAR;
+    const off = Math.abs(z.position.x) > 2.2;
+    if (close || off || kept >= GUN_PACK_FILL) {
+      knockOff(z, z.position.x - player.position.x, 'gun');
+      got++;
+    } else {
+      kept++;
+      z.userData.baseX *= GUN_PACK_SQUEEZE;
+      z.position.x *= GUN_PACK_SQUEEZE;
+    }
+  }
+  if (got) {
+    combo += got; bestCombo = Math.max(bestCombo, combo);
+    score(got * 8);
+  }
+  spawnTimer = 0.55;
+}
 function startGun(stack = false) {
   audioResume();
   if (stack && gunT > 0) {
@@ -765,6 +794,8 @@ function startGun(stack = false) {
     flash('GUN +' + GUN_DURATION + 's', '#ff8a2a');
   } else {
     gunT = GUN_DURATION; gunCd = 0;
+    thinForGun();
+    invuln = Math.max(invuln, GUN_START_INVULN);
     flash('GUN ' + GUN_DURATION + 's', '#ff8a2a');
   }
   refreshPowerHud();
