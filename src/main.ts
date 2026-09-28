@@ -81,15 +81,16 @@ const CART_GRAVITY = 16;
 const GUN_DURATION = 10;
 const GUN_RATE = 0.11;
 const GUN_SPEED = 38;
-const GUN_HIT_X = 0.75;
-const GUN_HIT_Z = 0.85;
+const GUN_HIT_X = 0.95;
+const GUN_HIT_Z = 1.0;
 const GUN_STACK_MAX = 20;
-const GUN_PACK_GAP = 0.36;        // waves while spraying
-const GUN_PACK_FILL = 5;          // occupy every lane
-const GUN_PACK_ROWS = 2;          // two tight rows per wave
-const GUN_PACK_ROW_Z = 1.15;      // spacing between pack rows
-const GUN_PACK_SQUEEZE = 0.68;    // pull lanes toward the spray line
-const GUN_PACK_Z_JITTER = 0.35;
+const GUN_PACK_GAP = 0.78;        // leave time to hose the clump
+const GUN_PACK_FILL = 3;          // a small pack, not a wall
+const GUN_PACK_ROWS = 1;
+const GUN_PACK_ROW_Z = 1.15;
+const GUN_PACK_SQUEEZE = 0.55;    // pull them into the spray line
+const GUN_PACK_Z_JITTER = 0.4;
+const GUN_PACK_LANES = [1, 2, 3]; // center three slots only
 
 function clamp(v: number, lo: number, hi: number) {
   return v < lo ? lo : v > hi ? hi : v;
@@ -684,9 +685,14 @@ function spawnWave() {
     : SPAWN_FILL_START + Math.floor(c * (SPAWN_FILL_END - SPAWN_FILL_START + 0.001));
   if (!packing && Math.random() < c * 0.28) fill = Math.min(fill + 1, SPAWN_FILL_END);
   fill = Math.min(fill, 5);
-  const idx = [0, 1, 2, 3, 4];
-  for (let i = idx.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[idx[i], idx[j]] = [idx[j], idx[i]]; }
-  const chosen = idx.slice(0, fill);
+  let chosen: number[];
+  if (packing) {
+    chosen = GUN_PACK_LANES.slice(0, fill);
+  } else {
+    const idx = [0, 1, 2, 3, 4];
+    for (let i = idx.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[idx[i], idx[j]] = [idx[j], idx[i]]; }
+    chosen = idx.slice(0, fill);
+  }
   const rows = packing ? GUN_PACK_ROWS : 1;
   const jitter = packing ? GUN_PACK_Z_JITTER : 3;
   for (let row = 0; row < rows; row++) {
