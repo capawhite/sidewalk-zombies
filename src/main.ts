@@ -34,8 +34,10 @@ const STEER_ACCEL = 48;           // was 140 — hold to get up to speed
 const STEER_DECEL = 160;          // stop quickly when you let go
 const STEER_REVERSE = 80;         // was 220 — A↔D is gentler
 const STEER_TAP_BUFFER = 0.02;    // was 0.07 — don't keep sliding after a tap
-const STEER_TOUCH_RANGE = 0.22;
-const STEER_TOUCH_DEAD = 0.06;
+const STEER_TOUCH_SPAN = 8;       // full-screen drag = this many world units (aisle is ~8)
+const STEER_TOUCH_FOLLOW = 36;    // how fast we catch the finger
+const STEER_TOUCH_DEAD_PX = 10;   // ignore tiny finger jitter
+const STEER_FLICK = 0.55;         // leftover slide after a swipe (not a hold)
 const STEER_LEAN = 0.22;
 const STEER_YAW = 0.14;
 const STEER_LEAN_SMOOTH = 18;
@@ -428,7 +430,8 @@ let dist = 0, speed = SPEED_START, lives = 3, combo = 0, bestCombo = 0, invuln =
 let shoveCd = 0, lastCd = POWERS.shoulder.cd, power = 'shoulder', cartRush = 0;
 let gunT = 0, gunCd = 0;
 let vx = 0, lean = 0, tapLeft = 0, tapRight = 0;
-let pointerActive = false, pointerX = 0, pointerOriginX = 0;
+let pointerActive = false, pointerX = 0, pointerOriginX = 0, touchAnchorX = 0;
+let pointerLastX = 0, pointerLastT = 0, pointerFlick = 0;
 let last = performance.now();
 const keys: any = {};
 let best = 0; try { best = parseInt(localStorage.getItem('sz_best') || '0', 10) || 0; } catch (e) {}
@@ -451,10 +454,29 @@ window.addEventListener('keyup', (e) => {
 wrap.addEventListener('pointerdown', (e) => {
   if (state !== S.play) return;
   if ((e.target as HTMLElement).id === 'shove') return;
-  pointerActive = true; pointerX = e.clientX; pointerOriginX = e.clientX; audioResume();
+  pointerActive = true;
+  pointerX = pointerOriginX = pointerLastX = e.clientX;
+  pointerLastT = performance.now();
+  pointerFlick = 0;
+  touchAnchorX = player.position.x;
+  try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+  audioResume();
 });
-wrap.addEventListener('pointermove', (e) => { if (pointerActive) pointerX = e.clientX; });
-window.addEventListener('pointerup', () => { pointerActive = false; });
+wrap.addEventListener('pointermove', (e) => {
+  if (!pointerActive) return;
+  const t = performance.now();
+  const dtm = (t - pointerLastT) / 1000;
+  if (dtm > 0.0001) pointerFlick = (e.clientX - pointerLastX) / dtm;
+  pointerX = pointerLastX = e.clientX;
+  pointerLastT = t;
+});
+window.addEventListener('pointerup', () => {
+  if (pointerActive) {
+    const flickU = (pointerFlick / Math.max(wrap.clientWidth, 1)) * STEER_TOUCH_SPAN * STEER_FLICK;
+    vx = clamp(flickU, -9, 9);
+  }
+  pointerActive = false;
+});
 document.getElementById('shove')!.addEventListener('click', doShove);
 document.getElementById('start')!.addEventListener('click', start);
 document.getElementById('again')!.addEventListener('click', start);
@@ -719,7 +741,7 @@ function start() {
   spawnTimer = SPAWN_GAP_START; pickTimer = 2.2;
   spawnWave();
   vx = 0; lean = 0; tapLeft = 0; tapRight = 0;
-  pointerActive = false;
+  pointerActive = false; pointerFlick = 0; touchAnchorX = 0;
   player.position.set(0, 0, 6.5); player.rotation.set(0, 0, 0);
   setPower('shoulder');
   state = S.play;
@@ -763,24 +785,30 @@ function tick(now: number) {
 
     if (tapLeft > 0) tapLeft -= dt;
     if (tapRight > 0) tapRight -= dt;
-    let inp = 0;
-    if (keys.left || tapLeft > 0) inp -= 1;
-    if (keys.right || tapRight > 0) inp += 1;
+    const prevX = player.position.x;
     if (pointerActive) {
-      let raw = (pointerX - pointerOriginX) / (wrap.clientWidth * STEER_TOUCH_RANGE);
-      const dead = STEER_TOUCH_DEAD;
-      if (Math.abs(raw) < dead) raw = 0;
-      else raw = (raw - Math.sign(raw) * dead) / (1 - dead);
-      inp = clamp(raw, -1, 1);
+      let dxPx = pointerX - pointerOriginX;
+      if (Math.abs(dxPx) < STEER_TOUCH_DEAD_PX) dxPx = 0;
+      const targetX = clamp(
+        touchAnchorX + (dxPx / Math.max(wrap.clientWidth, 1)) * STEER_TOUCH_SPAN,
+        -CLAMP_X, CLAMP_X,
+      );
+      player.position.x = toward(player.position.x, targetX, STEER_TOUCH_FOLLOW * dt);
+      vx = 0;
+    } else {
+      let inp = 0;
+      if (keys.left || tapLeft > 0) inp -= 1;
+      if (keys.right || tapRight > 0) inp += 1;
+      const targetVx = inp * STEER_MAX_SPEED;
+      const reversing = inp !== 0 && vx !== 0 && Math.sign(inp) !== Math.sign(vx);
+      const rate = inp === 0 ? STEER_DECEL : reversing ? STEER_REVERSE : STEER_ACCEL;
+      vx = toward(vx, targetVx, rate * dt);
+      player.position.x += vx * dt;
     }
-    const targetVx = inp * STEER_MAX_SPEED;
-    const reversing = inp !== 0 && vx !== 0 && Math.sign(inp) !== Math.sign(vx);
-    const rate = inp === 0 ? STEER_DECEL : reversing ? STEER_REVERSE : STEER_ACCEL;
-    vx = toward(vx, targetVx, rate * dt);
-    player.position.x += vx * dt;
     if (player.position.x > CLAMP_X) { player.position.x = CLAMP_X; vx = 0; }
     if (player.position.x < -CLAMP_X) { player.position.x = -CLAMP_X; vx = 0; }
-    lean += (vx / STEER_MAX_SPEED - lean) * Math.min(1, dt * STEER_LEAN_SMOOTH);
+    const instV = (player.position.x - prevX) / Math.max(dt, 0.0001);
+    lean += (clamp(instV / 8, -1, 1) - lean) * Math.min(1, dt * STEER_LEAN_SMOOTH);
     player.rotation.z = -lean * STEER_LEAN;
     player.rotation.y = lean * STEER_YAW;
     gait(player, now * 0.014, 0.55);
