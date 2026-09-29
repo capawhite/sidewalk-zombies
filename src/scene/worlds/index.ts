@@ -10,6 +10,14 @@ import { makeStreetSegment } from './street';
 
 // ---------- aisle ----------
 export const scroll: any[] = [];
+
+// Slide every world segment toward the camera by dz, wrapping the far ones back to the start.
+export function scrollWorld(dz: number) {
+  for (const s of scroll) {
+    s.position.z += dz;
+    if (s.position.z > SEG_LEN) s.position.z -= SEG_N * SEG_LEN;
+  }
+}
 function setTheme(lv: number) {
   if (lv === 4) {
     scene.background = new THREE.Color(0x6ec4f0);

@@ -1,6 +1,6 @@
 // Spawning of crowds, pickups and coins.
 import * as THREE from 'three';
-import { CLAMP_X, CROWD_RAMP_DIST, GUN_PACK_FILL, GUN_PACK_LANES, GUN_PACK_MORE, GUN_PACK_ROWS, GUN_PACK_ROW_Z, GUN_PACK_SQUEEZE, GUN_PACK_Z_JITTER, SPAWN_FILL_END, SPAWN_FILL_START, SPAWN_Z, TYPES } from '../config';
+import { CLAMP_X, COIN_GAP, CROWD_RAMP_DIST, GUN_PACK_FILL, GUN_PACK_GAP, GUN_PACK_LANES, GUN_PACK_MORE, GUN_PACK_ROWS, GUN_PACK_ROW_Z, GUN_PACK_SQUEEZE, GUN_PACK_Z_JITTER, SPAWN_FILL_END, SPAWN_FILL_START, SPAWN_GAP, SPAWN_Z, TYPES } from '../config';
 import { applyPose } from '../entities/person';
 import { PICK_COL, getCoin, getPickup, getZombie } from '../entities/pools';
 import { G, slotsX, stageOf } from '../state';
@@ -90,4 +90,23 @@ export function spawnPickup() {
   p.active = true; p.visible = true;
   const x = slotsX[(Math.random() * slotsX.length) | 0];
   p.position.set(x, 0, SPAWN_Z + 2);
+}
+export function updateSpawns(dt: number) {
+  G.spawnTimer -= dt;
+  if (G.spawnTimer <= 0) {
+    spawnWave();
+    G.spawnTimer = G.gunT > 0
+      ? GUN_PACK_GAP + Math.random() * 0.08
+      : SPAWN_GAP + Math.random() * 0.2;
+  }
+  G.pickTimer -= dt;
+  if (G.pickTimer <= 0) {
+    spawnPickup();
+    G.pickTimer = 6.5 + Math.random() * 2;
+  }
+  G.coinTimer -= dt;
+  if (G.coinTimer <= 0) {
+    spawnCoin();
+    G.coinTimer = COIN_GAP + Math.random() * 1.1;
+  }
 }
