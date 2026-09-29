@@ -1,5 +1,6 @@
 // Game loop: one simulation step (frame) plus rendering (tick).
 import { elScore } from './hud/hud';
+import { updatePerf } from './hud/perf';
 import { camera, renderer, scene, wrap } from './render/renderer';
 import { flapSeagulls } from './scene/seagulls';
 import { scrollWorld } from './scene/worlds';
@@ -23,6 +24,7 @@ export function tick(now: number) {
   if (dt > 0.05) dt = 0.05;
   frame(dt, now);
   renderer.render(scene, camera);
+  updatePerf(dt);
 }
 
 // One simulation step: everything except drawing. The replay harness calls this directly.
