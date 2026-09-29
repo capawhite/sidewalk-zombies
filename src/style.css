@@ -180,3 +180,60 @@ button.play:hover{filter:brightness(1.05);}
   #shove{width:82px;height:82px;font-size:13px;}
   #arsenal .slot{width:32px;height:32px;font-size:8px;}
 }
+
+/* ---------- polish ---------- */
+#vig{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 55%,transparent 52%,rgba(10,8,14,.34) 100%);}
+#wrap.hot #vig{box-shadow:inset 0 0 90px rgba(255,120,30,.5);}
+#fx{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:#fff;}
+#fx.go{animation:fxFlash .38s ease-out;}
+@keyframes fxFlash{0%{opacity:.8}100%{opacity:0}}
+#pops{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.pop{position:absolute;transform:translate(-50%,-50%);font-family:var(--font-display);font-weight:800;
+  font-size:19px;letter-spacing:.02em;white-space:nowrap;opacity:0;
+  text-shadow:0 2px 0 rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.4);animation:popUp .85s ease-out forwards;}
+.pop.big{font-size:27px;}
+@keyframes popUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.5)}
+  16%{opacity:1;transform:translate(-50%,-70%) scale(1.15)}
+  100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+#banner{position:absolute;left:0;right:0;top:22%;text-align:center;opacity:0;pointer-events:none;}
+#banner small{display:block;letter-spacing:.42em;font-size:12px;font-weight:800;color:#fff;
+  text-shadow:0 2px 8px rgba(0,0,0,.6);margin-bottom:4px;}
+#banner b{display:block;font-family:var(--font-display);font-weight:800;font-size:clamp(30px,9vw,56px);
+  color:#ffe27a;letter-spacing:.02em;text-shadow:0 4px 0 #b8560a,0 10px 24px rgba(0,0,0,.5);}
+#banner.show{animation:bannerIn 2.5s ease-out both;}
+@keyframes bannerIn{0%{opacity:0;transform:scale(.55) translateY(12px)}
+  12%{opacity:1;transform:scale(1.1)}20%{transform:scale(1)}78%{opacity:1}
+  100%{opacity:0;transform:translateY(-18px)}}
+#mute{position:absolute;right:16px;top:calc(env(safe-area-inset-top,0px) + 86px);width:34px;height:34px;
+  border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  font-size:16px;line-height:1;pointer-events:auto;cursor:pointer;backdrop-filter:blur(6px);}
+#mute.off{opacity:.55;text-decoration:line-through;}
+.vault{margin:-6px 0 14px;font-size:12.5px;color:var(--muted);}
+.vault b{color:#f0d078;font-family:var(--font-display);font-size:15px;}
+.gold{color:#f0d078;}
+
+/* wallet cutscene */
+.c-bank{position:relative;display:flex;align-items:center;justify-content:center;gap:18px;
+  height:92px;margin:2px 0 14px;}
+.c-fly{position:absolute;left:0;right:0;top:-70px;bottom:0;pointer-events:none;z-index:1;}
+.fc{position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;opacity:0;
+  background:radial-gradient(circle at 35% 30%,#fff6b0,#f0c020 55%,#b8860b);
+  box-shadow:0 0 10px rgba(255,220,100,.85);}
+.wallet{position:relative;z-index:2;width:88px;height:64px;}
+.wallet.bump{animation:wBump .2s;}
+@keyframes wBump{50%{transform:scale(1.13) rotate(-3deg)}}
+.w-back{position:absolute;left:0;right:0;bottom:0;top:16px;border-radius:10px;
+  background:linear-gradient(180deg,#8a4f2a,#5a2f16);
+  box-shadow:0 6px 0 #3a1c0c, inset 0 2px 0 rgba(255,255,255,.2);}
+.w-flap{position:absolute;left:0;right:0;top:0;height:34px;border-radius:12px 12px 8px 8px;
+  background:linear-gradient(180deg,#b06a34,#7a4322);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.28), 0 3px 0 rgba(0,0,0,.25);}
+.w-clasp{position:absolute;left:50%;top:24px;width:17px;height:17px;margin-left:-8px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#fff2b0,#e8b84a);box-shadow:0 2px 0 #8a5c10;}
+.w-count{position:relative;z-index:2;text-align:left;min-width:110px;}
+.w-count small{display:block;font-size:10px;letter-spacing:.2em;color:#f0d078;font-weight:800;}
+.w-count b{display:block;font-family:var(--font-display);font-weight:800;font-size:40px;line-height:1;
+  color:#fff6d0;text-shadow:0 3px 0 #7a4a10;font-variant-numeric:tabular-nums;}
+.w-count em{display:block;font-style:normal;font-size:12px;color:#f3efe6;margin-top:3px;max-width:190px;line-height:1.25;}
+.final{flex-wrap:wrap;}

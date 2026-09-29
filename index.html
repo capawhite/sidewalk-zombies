@@ -13,6 +13,7 @@
 </head>
 <body>
   <div id="wrap">
+    <div id="vig"></div>
     <div id="hud">
       <div class="top">
         <div class="top-left">
@@ -22,11 +23,16 @@
         <div class="stat" style="text-align:right"><div class="k">Composure · <span id="level">Lv 1</span></div><div id="lives"></div></div>
       </div>
       <div id="flash"></div>
+      <div id="banner"><small id="bKick">LEVEL 1</small><b id="bName">CEREAL AISLE</b></div>
+      <div id="pops"></div>
+      <button id="mute" aria-label="Toggle sound">&#9834;</button>
       <div id="playBar">
         <div id="arsenal" class="hide"></div>
         <button id="shove" class="hide"><span id="shoveName">SHOVE</span><small id="shoveHint">SPACE</small><div class="cool" id="cool" style="transform:scaleY(0)"></div></button>
       </div>
     </div>
+
+    <div id="fx"></div>
 
     <div class="screen" id="menu">
       <div class="card">
@@ -43,6 +49,7 @@
           <span><kbd>Space</kbd> knock</span><span class="sep">·</span>
           <span>on phone: <b>drag</b> to steer, tap the button</span>
         </div>
+        <p class="vault">Wallet: <b id="vault">0</b> coins saved</p>
         <button class="play" id="start">Hit the aisle →</button>
         <p class="foot"><b>SHOVE</b> into the shelves. <b>BAT</b> launches them. <b>HORN</b> honks them aside. <b>GUN</b> sprays a thin line for 10s. <b>BOMB</b> clears everyone. <b>COINS</b> are arcade candy. Clear 500 / 1100 / 1800 for the next scene and a bonus life. Bumping someone cold costs composure.</p>
       </div>
@@ -57,6 +64,11 @@
         <div class="c-kicker" id="cKicker">★ AISLE ACE ★</div>
         <h2 id="cTitle">YOU MADE IT!</h2>
         <p class="c-sub" id="cSub">Cereal's cleared. Next stop: the boardwalk — ring lights, tripods, and people who think you're a lamp post.</p>
+        <div class="c-bank" id="cBank">
+          <div class="c-fly" id="cFly"></div>
+          <div class="wallet" id="wallet"><i class="w-back"></i><i class="w-flap"></i><i class="w-clasp"></i></div>
+          <div class="w-count"><small>WALLET</small><b id="wCount">0</b><em id="wNote"></em></div>
+        </div>
         <div class="c-prizes" id="cPrizes">
           <span>♥ BONUS LIFE</span>
           <span>BAT</span>
@@ -76,6 +88,7 @@
           <div class="stat2"><div class="k">This run</div><div class="v" id="fScore">0</div></div>
           <div class="stat2"><div class="k">Best</div><div class="v best" id="fBest">0</div></div>
           <div class="stat2"><div class="k">Best combo</div><div class="v" id="fCombo">0</div></div>
+          <div class="stat2"><div class="k">Coins</div><div class="v gold" id="fCoins">0</div></div>
         </div>
         <button class="play" id="again">Back in the aisle →</button>
       </div>
