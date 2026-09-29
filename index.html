@@ -26,7 +26,7 @@
       <div class="card">
         <div class="eyebrow">Feel prototype · v0.1</div>
         <h1>Sidewalk Zombies</h1>
-        <p class="tag">They're not undead. They're just texting in the cereal aisle. Clear 500 points and the curtain opens on the boardwalk.</p>
+        <p class="tag">They're not undead. They're just on their phones in the cereal aisle. Weave, bonk, and grab toys. Hit 500 and the curtains go nuts.</p>
         <div class="legend">
           <div class="row"><span class="dot" style="background:var(--talk)"></span><div><b>Calling</b> — <span>phone on the ear, wandering left and right across the aisle.</span></div></div>
           <div class="row"><span class="dot" style="background:var(--text)"></span><div><b>Texting</b> — <span>head down, walking straight at you. Easy to read, if you look.</span></div></div>
@@ -45,30 +45,33 @@
     <div id="curtain" class="hide">
       <div class="c-left"></div>
       <div class="c-right"></div>
+      <div class="c-spot"></div>
+      <div id="cGlitz" class="c-glitz"></div>
       <div class="c-board">
-        <div class="c-kicker">Curtain call</div>
-        <h2>LEVEL 1 CLEAR</h2>
-        <p class="c-sub">The aisle is closed. The boardwalk is worse — ring lights, tripods, bikinis, no awareness.</p>
+        <div class="c-kicker">★ AISLE ACE ★</div>
+        <h2>YOU MADE IT!</h2>
+        <p class="c-sub">Cereal's cleared. Next stop: the boardwalk — ring lights, tripods, and people who think you're a lamp post.</p>
         <div class="c-prizes">
-          <span>+1 LIFE</span>
+          <span>♥ BONUS LIFE</span>
           <span>BAT</span>
           <span>HORN</span>
           <span>BOMB</span>
         </div>
+        <button class="play c-go" id="continue">Hit the boardwalk →</button>
       </div>
     </div>
 
     <div class="screen hide" id="over">
       <div class="card">
-        <div class="eyebrow" id="verdict">Wiped out</div>
-        <h1 id="overTitle">Faceplant.</h1>
-        <p class="tag" id="overMsg">A filming influencer got you. Classic.</p>
+        <div class="eyebrow" id="verdict">Composure: gone</div>
+        <h1 id="overTitle">BONK!</h1>
+        <p class="tag" id="overMsg">A texter used you as a bumper.</p>
         <div class="final">
           <div class="stat2"><div class="k">This run</div><div class="v" id="fScore">0</div></div>
           <div class="stat2"><div class="k">Best</div><div class="v best" id="fBest">0</div></div>
           <div class="stat2"><div class="k">Best combo</div><div class="v" id="fCombo">0</div></div>
         </div>
-        <button class="play" id="again">Run it back →</button>
+        <button class="play" id="again">Back in the aisle →</button>
       </div>
     </div>
   </div>

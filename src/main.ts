@@ -100,7 +100,6 @@ const GUN_PACK_LANES = [1, 2, 3]; // extra slot for the 20% third
 const GUN_CLEAR_NEAR = -5;        // already this close = blasted on pickup
 const GUN_START_INVULN = 0.45;
 const LEVEL2_AT = 500;            // total score to clear the aisle
-const LEVEL_CLEAR_T = 3.4;
 const LIVES_CAP = 6;
 const INF_DRIFT = 1.9;
 const INF_DRIFT_RATE = 1.15;
@@ -717,7 +716,7 @@ let pointerLastX = 0, pointerLastT = 0, pointerFlick = 0;
 let last = performance.now();
 const keys: any = {};
 let best = 0; try { best = parseInt(localStorage.getItem('sz_best') || '0', 10) || 0; } catch (e) {}
-let level = 1, clearT = 0;
+let level = 1;
 
 const slotsX = [-3.4, -1.7, 0, 1.7, 3.4];
 let spawnTimer = 0;
@@ -728,7 +727,11 @@ let pickTimer = 0;
 window.addEventListener('keydown', (e) => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
-  if (e.code === 'Space') { e.preventDefault(); doShove(); }
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    if (state === S.clear) enterLevel2();
+    else doShove();
+  }
 });
 window.addEventListener('keyup', (e) => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') { keys.left = false; tapLeft = STEER_TAP_BUFFER; }
@@ -763,6 +766,10 @@ window.addEventListener('pointerup', () => {
 document.getElementById('shove')!.addEventListener('click', doShove);
 document.getElementById('start')!.addEventListener('click', start);
 document.getElementById('again')!.addEventListener('click', start);
+document.getElementById('continue')!.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (state === S.clear) enterLevel2();
+});
 
 // ---------- audio ----------
 let AC: AudioContext | null = null;
@@ -926,7 +933,8 @@ const elScore = document.getElementById('score')!, elLives = document.getElement
   elFlash = document.getElementById('flash')!, elShove = document.getElementById('shove')!,
   elCool = document.getElementById('cool')!, elShoveName = document.getElementById('shoveName')!,
   elShoveHint = document.getElementById('shoveHint')!, elShoveQ = document.getElementById('shoveQ')!,
-  elCurtain = document.getElementById('curtain')!, elLevel = document.getElementById('level')!;
+  elCurtain = document.getElementById('curtain')!, elLevel = document.getElementById('level')!,
+  elGlitz = document.getElementById('cGlitz')!;
 function drawLives() {
   elLives.innerHTML = '';
   const n = Math.max(LIVES_MAX, lives);
@@ -1199,17 +1207,34 @@ function gait(z: any, t: number, amt: number) {
   d.rArm.rotation.x = sw * 0.7;
 }
 
+function fillGlitz() {
+  elGlitz.innerHTML = '';
+  const bits = ['★', '✦', '●', '◆', '✧', '•'];
+  const cols = ['#f0d078', '#ff7a2f', '#fff6d0', '#ff5a3c', '#7fd0ff', '#ffe27a'];
+  for (let i = 0; i < 26; i++) {
+    const s = document.createElement('span');
+    s.className = 'spark';
+    s.textContent = bits[i % bits.length];
+    s.style.left = (4 + Math.random() * 92) + '%';
+    s.style.animationDelay = (Math.random() * 1.6) + 's';
+    s.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+    s.style.color = cols[i % cols.length];
+    s.style.fontSize = (11 + ((i * 7) % 16)) + 'px';
+    elGlitz.appendChild(s);
+  }
+}
 function beginClear() {
   if (state !== S.play || level !== 1) return;
   state = S.clear;
-  clearT = LEVEL_CLEAR_T;
   elShove.classList.add('hide');
+  fillGlitz();
   elCurtain.classList.remove('hide');
   void elCurtain.offsetWidth;
   elCurtain.classList.add('show');
   sfxFanfare();
 }
 function enterLevel2() {
+  if (state !== S.clear) return;
   level = 2;
   lives = Math.min(lives + 1, LIVES_CAP);
   for (const k of LEVEL2_KIT) powerQ.push(k);
@@ -1239,7 +1264,7 @@ function start() {
   dist = 0; speed = SPEED; lives = LIVES_MAX; combo = 0; bestCombo = 0; invuln = 0; shake = 0;
   shoveCd = 0; lastCd = POWERS.shoulder.cd; cartRush = 0; scareT = 0; gunT = 0; gunCd = 0; scoreAcc = 0;
   powerQ.length = 0;
-  level = 1; clearT = 0;
+  level = 1;
   elLevel.textContent = 'Lv 1';
   elCurtain.classList.remove('show');
   elCurtain.classList.add('hide');
@@ -1267,13 +1292,33 @@ function gameOver(cause: string) {
   document.getElementById('fScore')!.textContent = String(total);
   document.getElementById('fBest')!.textContent = String(best);
   document.getElementById('fCombo')!.textContent = String(bestCombo);
+  const titles = ['BONK!', 'OOF!', 'SPLAT!', 'PHONE FACE!', 'DOWN YOU GO!', 'AISLE WIPEOUT!'];
+  const verdicts = ['Composure: gone', 'Caught in 4K', 'That\'s a wrap', 'Out of chill', 'Face met floor'];
   const msgs: any = {
-    selfie: ['Blindsided by a selfie.', 'A filming influencer got you. Classic.'],
-    text: ['Out-drifted by a texter.', 'They never even looked up.'],
-    talk: ['A caller drifted into you.', 'They never paused the chat.'],
-    inf: ['Walked into a ring light.', 'She never stopped filming.'],
+    selfie: [
+      'You photobombed the wrong shoot. They kept rolling.',
+      'Selfie stick: 1. You: a pile.',
+      'Congrats — you\'re the crash in someone\'s story.',
+    ],
+    text: [
+      'A texter used you as a bumper. Still typing.',
+      'They never looked up. You did. That\'s the joke.',
+      'Head down, thumbs up, you down.',
+    ],
+    talk: [
+      'A caller took a left through your personal space. Then your face.',
+      'They said "can you hear me now?" Loud and clear. With your nose.',
+      'Hands-free walking. You were the free part.',
+    ],
+    inf: [
+      'Ring light, tripod, you. Only one of those wanted to be on the floor.',
+      'She filmed the wipeout. It already has a sound on it.',
+      'Influencer: 1. Sidewalk: you.',
+    ],
   };
   const m = msgs[cause] || msgs.talk;
+  document.getElementById('overTitle')!.textContent = titles[(Math.random() * titles.length) | 0];
+  document.getElementById('verdict')!.textContent = verdicts[(Math.random() * verdicts.length) | 0];
   document.getElementById('overMsg')!.textContent = m[(Math.random() * m.length) | 0];
   document.getElementById('over')!.classList.remove('hide');
   sfxOver();
@@ -1463,18 +1508,13 @@ function tick(now: number) {
             combo++; bestCombo = Math.max(bestCombo, combo);
             const bonus = 10 + Math.min(combo, 20) * 2;
             score(bonus);
-            if (combo >= 3) flash('NICE ×' + combo + '  +' + bonus, gap < 1.6 ? 'var(--accent)' : 'var(--talk)');
+            if (combo >= 3) flash((combo >= 8 ? 'WHOA ×' : combo >= 5 ? 'SLIPPERY ×' : 'NICE ×') + combo + '  +' + bonus, gap < 1.6 ? 'var(--accent)' : 'var(--talk)');
             sfxNear(combo);
           }
         }
       }
       if (z.position.z > 16) { z.active = false; z.visible = false; }
     }
-  }
-
-  if (state === S.clear) {
-    clearT -= dt;
-    if (clearT <= 0) enterLevel2();
   }
 
   const tx = state === S.play ? player.position.x * CAM_FOLLOW_X : 0;
