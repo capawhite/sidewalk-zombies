@@ -1990,6 +1990,12 @@ function tick(now: number) {
   let dt = (now - last) / 1000; last = now;
   if (dt < 0) dt = 0;
   if (dt > 0.05) dt = 0.05;
+  frame(dt, now);
+  renderer.render(scene, camera);
+}
+
+// One simulation step: everything except drawing. The replay harness calls this directly.
+function frame(dt: number, now: number) {
   if (hitStop > 0) { hitStop -= dt; dt *= 0.06; }
 
   if (state === S.play) {
@@ -2230,10 +2236,56 @@ function tick(now: number) {
   if (fovKick > 0) fovKick = Math.max(0, fovKick - dt * 24);
   const wantFov = baseFov + fovKick;
   if (Math.abs(camera.fov - wantFov) > 0.01) { camera.fov = wantFov; camera.updateProjectionMatrix(); }
-
-  renderer.render(scene, camera);
 }
 
 drawLives();
 setPower('shoulder');
+
+// ---------- dev: deterministic replay (verifies refactors play identically) ----------
+// Open the game with ?replay, then run window.__replay.run(1234, 7200) in the console.
+// Fixed 1/60s steps, seeded Math.random, scripted input. Returns a trace + hash to diff.
+function runReplay(seed: number, frames: number) {
+  let a = seed >>> 0, calls = 0;
+  Math.random = () => {
+    calls++;
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const lines: string[] = [];
+  const cycle = ['cart', 'horn', 'gun', 'bomb'];
+  let clearFrame = -1;
+  start();
+  for (let f = 0; f < frames; f++) {
+    const ph = f % 300;
+    keys.left = ph < 50;
+    keys.right = ph >= 100 && ph < 190;
+    pointerActive = f >= 600 && f < 700;
+    if (pointerActive) { pointerOriginX = 200; pointerX = 200 + (f - 600) * 2; if (f === 600) touchAnchorX = 0; }
+    if (f % 45 === 0) doShove();
+    if (f % 500 === 250) collectPower(cycle[(f / 500 | 0) % 4]);
+    if (f === 1500 || f === 3500 || f === 5500) scoreAcc += 600;
+    if (f % 400 === 0 && state === S.play) { lives = LIVES_MAX; drawLives(); }
+    if (state === S.over || state === S.menu) start();
+    if (state === S.clear) { if (clearFrame < 0) clearFrame = f; if (f - clearFrame > 30) { enterNextLevel(); clearFrame = -1; } }
+    frame(1 / 60, f * 1000 / 60);
+    if (f % 60 === 0) {
+      let sx = 0, sz = 0, kn = 0, n = 0;
+      for (const z of pool) if (z.active) { n++; sx += z.position.x; sz += z.position.z; if (z.userData.knocked) kn++; }
+      const cnt = (arr: any[]) => arr.filter((o) => o.active).length;
+      lines.push([f, state, level, Math.round(dist * 1000), scoreAcc, lives, combo, coins, Math.round(gunT * 1000),
+        Math.round(player.position.x * 1000), n, Math.round(sx * 1000), Math.round(sz * 1000), kn,
+        cnt(pickPool), cnt(coinPool), cnt(bullets), cnt(parts), calls].join(','));
+    }
+  }
+  let h = 2166136261;
+  for (const ch of lines.join('|')) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return { hash: h, calls, count: lines.length, lines };
+}
+if (new URLSearchParams(location.search).has('replay')) {
+  (window as any).__replay = { run: runReplay };
+}
+
 requestAnimationFrame(tick);

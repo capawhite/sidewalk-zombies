@@ -1,0 +1,8 @@
+{
+  "note": "Open the game at /?replay on a fresh page load, then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. Recorded before the Phase 0 refactor (commit that added the harness).",
+  "seed": 1234,
+  "frames": 7200,
+  "hash": 1101932839,
+  "calls": 130842,
+  "count": 120
+}
