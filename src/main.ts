@@ -802,6 +802,25 @@ function tone(freq: number, dur: number, type: OscillatorType, vol: number, when
   o.connect(g); g.connect(bus());
   o.start(t); o.stop(t + dur + 0.03);
 }
+function holdTone(
+  freq: number, dur: number, type: OscillatorType, vol: number, when = 0,
+  filt: BiquadFilterType = 'bandpass', ffreq = 700, q = 3, freqEnd?: number,
+) {
+  if (!AC) return;
+  const t = AC.currentTime + when;
+  const o = AC.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), t + dur);
+  const f = AC.createBiquadFilter(); f.type = filt; f.Q.value = q;
+  f.frequency.setValueAtTime(ffreq, t);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.014);
+  g.gain.setValueAtTime(vol, t + Math.max(0.04, dur * 0.62));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f); f.connect(g); g.connect(bus());
+  o.start(t); o.stop(t + dur + 0.05);
+}
 function burst(dur: number, vol: number, ffreq: number, when = 0, kind: BiquadFilterType = 'lowpass', ffreqEnd?: number, q = 1) {
   if (!AC || !noiseBuf) return;
   const t = AC.currentTime + when;
@@ -816,54 +835,67 @@ function burst(dur: number, vol: number, ffreq: number, when = 0, kind: BiquadFi
   src.connect(f); f.connect(g); g.connect(bus());
   src.start(t); src.stop(t + dur + 0.03);
 }
-function echo(freq: number, dur: number, type: OscillatorType, vol: number, when: number, delay: number) {
-  tone(freq, dur, type, vol, when);
-  tone(freq * 0.97, dur * 0.85, type, vol * 0.45, when + delay);
-}
 
 function sfxShove() {
-  burst(0.14, 0.2, 220, 0, 'lowpass', 70);
-  tone(72, 0.16, 'sine', 0.2);
-  tone(38, 0.22, 'sine', 0.12);
-  tone(180, 0.07, 'triangle', 0.06, 0.03, 90);
+  burst(0.12, 0.22, 240, 0, 'lowpass', 55);
+  burst(0.05, 0.1, 1600, 0, 'bandpass', 400, 2);
+  tone(68, 0.18, 'sine', 0.22);
+  tone(36, 0.26, 'sine', 0.14);
 }
+
 function sfxCart() {
-  burst(0.09, 0.18, 380, 0, 'lowpass', 90);
-  burst(0.06, 0.16, 2600, 0.02, 'bandpass', 700, 3);
-  tone(110, 0.12, 'sawtooth', 0.1);
-  tone(55, 0.2, 'sine', 0.14);
+  burst(0.1, 0.1, 2400, 0, 'highpass', 500);
+  burst(0.055, 0.22, 2100, 0.045, 'bandpass', 380, 5);
+  tone(210, 0.07, 'triangle', 0.09, 0.045, 80);
+  tone(72, 0.2, 'sine', 0.16, 0.045);
+  burst(0.12, 0.08, 700, 0.08, 'lowpass', 120);
 }
+
 function sfxHorn() {
-  tone(311, 0.14, 'square', 0.11);
-  tone(318, 0.14, 'square', 0.07);
-  tone(233, 0.22, 'square', 0.12, 0.12);
-  tone(239, 0.22, 'square', 0.07, 0.12);
-  echo(880, 0.1, 'sawtooth', 0.045, 0.28, 0.08);
-  tone(720, 0.16, 'sawtooth', 0.04, 0.32, 380);
+  const blast = (at: number, dur: number, vol: number) => {
+    holdTone(392, dur, 'sawtooth', vol * 0.16, at, 'bandpass', 620, 4.2);
+    holdTone(494, dur, 'sawtooth', vol * 0.14, at, 'bandpass', 780, 4.5);
+    holdTone(396, dur, 'square', vol * 0.07, at, 'bandpass', 640, 3.4);
+    holdTone(498, dur, 'square', vol * 0.06, at, 'bandpass', 800, 3.6);
+    holdTone(196, dur, 'sine', vol * 0.1, at, 'lowpass', 280, 0.8);
+    burst(dur * 0.9, vol * 0.05, 1100, at, 'bandpass', 850, 2.5);
+  };
+  blast(0, 0.42, 1);
+  blast(0.5, 0.32, 0.82);
 }
+
 function sfxGun() {
   const j = Math.random();
-  burst(0.045, 0.09, 2200 + j * 800, 0, 'bandpass', 900, 3);
-  tone(190 + j * 40, 0.035, 'square', 0.055);
-  tone(90, 0.04, 'sine', 0.04);
+  burst(0.028, 0.18, 4200 + j * 900, 0, 'highpass', 500);
+  burst(0.05, 0.14, 1100 + j * 200, 0, 'bandpass', 220, 1.8);
+  tone(95 + j * 25, 0.04, 'square', 0.07);
+  tone(48, 0.07, 'sine', 0.09);
+  burst(0.018, 0.07, 6500, 0.035, 'highpass');
 }
+
 function sfxBomb() {
-  burst(0.45, 0.28, 140, 0, 'lowpass', 40);
-  burst(0.12, 0.16, 900, 0.02, 'bandpass', 400, 2);
-  tone(56, 0.5, 'sine', 0.2, 0, 18);
-  tone(120, 0.18, 'sawtooth', 0.08, 0, 40);
-  burst(0.22, 0.1, 60, 0.12, 'lowpass', 30);
+  burst(0.035, 0.38, 5000, 0, 'highpass', 700);
+  burst(0.09, 0.26, 1600, 0.012, 'bandpass', 280, 1.1);
+  burst(0.85, 0.34, 320, 0.02, 'lowpass', 42);
+  burst(1.35, 0.24, 110, 0.04, 'lowpass', 22);
+  tone(52, 1.05, 'sine', 0.34, 0.02, 14);
+  tone(28, 1.4, 'sine', 0.22, 0.05, 10);
+  tone(78, 0.32, 'sawtooth', 0.07, 0.03, 22);
+  burst(0.22, 0.12, 2800, 0.07, 'highpass', 400);
+  burst(0.2, 0.1, 900, 0.16, 'bandpass', 250, 1.6);
+  burst(0.55, 0.14, 90, 0.28, 'lowpass', 28);
 }
+
 function sfxPickup(kind: string) {
   if (kind === 'cart') { tone(196, 0.08, 'triangle', 0.08); tone(247, 0.1, 'triangle', 0.07, 0.07); burst(0.06, 0.08, 900, 0.04, 'bandpass'); }
   else if (kind === 'gun') { burst(0.05, 0.08, 1800, 0, 'highpass'); tone(140, 0.06, 'square', 0.06); tone(210, 0.05, 'square', 0.05, 0.06); }
   else if (kind === 'bomb') { tone(98, 0.12, 'sine', 0.09); tone(73, 0.18, 'sine', 0.08, 0.1); burst(0.1, 0.06, 400, 0.08, 'lowpass'); }
-  else { tone(494, 0.07, 'square', 0.06); tone(370, 0.1, 'square', 0.055, 0.08); }
+  else { tone(392, 0.08, 'triangle', 0.07); tone(494, 0.12, 'triangle', 0.06, 0.09); }
 }
 function sfxBump() {
-  burst(0.16, 0.18, 180, 0, 'lowpass', 60);
-  tone(140, 0.14, 'sine', 0.12, 0, 70);
-  tone(90, 0.2, 'triangle', 0.07, 0.04, 50);
+  burst(0.16, 0.2, 190, 0, 'lowpass', 50);
+  tone(120, 0.14, 'sine', 0.12, 0, 55);
+  tone(70, 0.22, 'triangle', 0.08, 0.03, 40);
 }
 function sfxNear(n: number) {
   const f = 620 + Math.min(n, 12) * 28;
@@ -871,16 +903,15 @@ function sfxNear(n: number) {
   tone(f * 1.5, 0.09, 'sine', 0.03, 0.05);
 }
 function sfxOver() {
-  tone(220, 0.28, 'sawtooth', 0.1, 0, 70);
-  tone(160, 0.35, 'sawtooth', 0.08, 0.12, 42);
-  burst(0.3, 0.14, 200, 0.08, 'lowpass', 50);
+  burst(0.35, 0.16, 180, 0, 'lowpass', 40);
+  tone(98, 0.4, 'sine', 0.12, 0, 40);
+  tone(73, 0.5, 'sine', 0.1, 0.12, 28);
 }
 function sfxFanfare() {
-  tone(392, 0.12, 'triangle', 0.09);
-  tone(523, 0.14, 'triangle', 0.09, 0.12);
-  tone(659, 0.2, 'triangle', 0.1, 0.26);
-  tone(784, 0.32, 'triangle', 0.11, 0.44);
-  burst(0.18, 0.08, 1800, 0.08, 'highpass');
+  holdTone(392, 0.16, 'triangle', 0.09, 0, 'lowpass', 2000, 0.5);
+  holdTone(523, 0.18, 'triangle', 0.09, 0.14, 'lowpass', 2000, 0.5);
+  holdTone(659, 0.24, 'triangle', 0.1, 0.3, 'lowpass', 2000, 0.5);
+  holdTone(784, 0.4, 'triangle', 0.11, 0.5, 'lowpass', 2000, 0.5);
 }
 function playPower(kind: string) {
   if (kind === 'cart') sfxCart();
