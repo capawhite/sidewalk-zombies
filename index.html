@@ -15,18 +15,24 @@
   <div id="wrap">
     <div id="hud">
       <div class="top">
-        <div class="stat"><div class="k">Metres</div><div class="v" id="score">0</div></div>
+        <div class="top-left">
+          <div class="stat"><div class="k">Metres</div><div class="v" id="score">0</div></div>
+          <div class="stat gold"><div class="k">Coins</div><div class="v" id="coins">0</div></div>
+        </div>
         <div class="stat" style="text-align:right"><div class="k">Composure · <span id="level">Lv 1</span></div><div id="lives"></div></div>
       </div>
       <div id="flash"></div>
-      <button id="shove" class="hide"><span id="shoveName">SHOVE</span><small id="shoveHint">SPACE</small><span id="shoveQ" class="hide"></span><div class="cool" id="cool" style="transform:scaleY(0)"></div></button>
+      <div id="playBar">
+        <div id="arsenal" class="hide"></div>
+        <button id="shove" class="hide"><span id="shoveName">SHOVE</span><small id="shoveHint">SPACE</small><div class="cool" id="cool" style="transform:scaleY(0)"></div></button>
+      </div>
     </div>
 
     <div class="screen" id="menu">
       <div class="card">
         <div class="eyebrow">Feel prototype · v0.1</div>
         <h1>Sidewalk Zombies</h1>
-        <p class="tag">They're not undead. They're just on their phones in the cereal aisle. Weave, bonk, and grab toys. Hit 500 and the curtains go nuts.</p>
+        <p class="tag">They're not undead. They're just on their phones. Four scenes: cereal aisle, boardwalk influencers, food-court GPS zombies, then a beach of ring lights. Grab coins. Bonk. Survive.</p>
         <div class="legend">
           <div class="row"><span class="dot" style="background:var(--talk)"></span><div><b>Calling</b> — <span>phone on the ear, wandering left and right across the aisle.</span></div></div>
           <div class="row"><span class="dot" style="background:var(--text)"></span><div><b>Texting</b> — <span>head down, walking straight at you. Easy to read, if you look.</span></div></div>
@@ -38,7 +44,7 @@
           <span>on phone: <b>drag</b> to steer, tap the button</span>
         </div>
         <button class="play" id="start">Hit the aisle →</button>
-        <p class="foot"><b>SHOVE</b> into the shelves. <b>BAT</b> launches them. <b>HORN</b> honks them aside. <b>GUN</b> sprays the aisle for 10s. <b>BOMB</b> clears everyone. Hit 500 for Level 2: a boardwalk of influencers and a bonus life. Bumping someone cold costs composure.</p>
+        <p class="foot"><b>SHOVE</b> into the shelves. <b>BAT</b> launches them. <b>HORN</b> honks them aside. <b>GUN</b> sprays a thin line for 10s. <b>BOMB</b> clears everyone. <b>COINS</b> are arcade candy. Clear 500 / 1100 / 1800 for the next scene and a bonus life. Bumping someone cold costs composure.</p>
       </div>
     </div>
 
@@ -48,10 +54,10 @@
       <div class="c-spot"></div>
       <div id="cGlitz" class="c-glitz"></div>
       <div class="c-board">
-        <div class="c-kicker">★ AISLE ACE ★</div>
-        <h2>YOU MADE IT!</h2>
-        <p class="c-sub">Cereal's cleared. Next stop: the boardwalk — ring lights, tripods, and people who think you're a lamp post.</p>
-        <div class="c-prizes">
+        <div class="c-kicker" id="cKicker">★ AISLE ACE ★</div>
+        <h2 id="cTitle">YOU MADE IT!</h2>
+        <p class="c-sub" id="cSub">Cereal's cleared. Next stop: the boardwalk — ring lights, tripods, and people who think you're a lamp post.</p>
+        <div class="c-prizes" id="cPrizes">
           <span>♥ BONUS LIFE</span>
           <span>BAT</span>
           <span>HORN</span>
