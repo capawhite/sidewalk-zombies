@@ -65,7 +65,7 @@ export const SPAWN_Z = -18;
 export const AISLE_W = 9.4;
 export const SHELF_X = 6.5;
 export const CLAMP_X = 4.0;
-export const SEG_LEN = 20, SEG_N = 10, WORLD_BACK = -SEG_N * SEG_LEN;
+export const SEG_LEN = 20, SEG_N = 6, WORLD_BACK = -SEG_N * SEG_LEN;
 export const POWERS: any = {
   shoulder: { name: 'SHOVE', yell: 'SHOVE!', cd: 2.4, reach: 8, halfW: 2.2, shake: 0.28 },
   cart:     { name: 'BAT',   yell: 'WHACK!', cd: 4.2, reach: 14, halfW: 4.4, shake: 0.5, rush: 1.5 },

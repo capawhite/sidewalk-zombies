@@ -1,8 +1,8 @@
 {
-  "note": "Open the game at /?replay on a fresh page load, then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. Recorded before the Phase 0 refactor (commit that added the harness).",
+  "note": "Open the game at /?replay on a fresh page load, then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. Baseline v2 was recorded after SEG_N went 10 -> 6: world building consumes Math.random, so fewer segments shifts the seeded stream. v1 (SEG_N=10, pre-refactor) was hash 1101932839, calls 130842, count 120; the refactor reproduced v1 exactly.",
   "seed": 1234,
   "frames": 7200,
-  "hash": 1101932839,
-  "calls": 130842,
+  "hash": 1202051037,
+  "calls": 125821,
   "count": 120
 }
