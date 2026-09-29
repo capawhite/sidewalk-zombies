@@ -949,48 +949,50 @@ function flash(msg: string, color: string) {
   elFlash.classList.remove('show'); void (elFlash as HTMLElement).offsetWidth; elFlash.classList.add('show');
 }
 function peekPower(): string {
-  return gunT > 0 ? 'gun' : 'shoulder';
+  return gunT > 0 ? 'gun' : (powerQ[0] || 'shoulder');
 }
 function waitingPower(): string {
-  return powerQ[0] || '';
+  return powerQ[gunT > 0 ? 0 : 1] || '';
 }
 function refreshPowerHud() {
   power = peekPower();
   if (gunT <= 0) elShoveName.textContent = POWERS[power].name;
   elShove.classList.remove('power-cart', 'power-horn', 'power-gun', 'power-bomb');
+  if (power === 'cart') elShove.classList.add('power-cart');
+  if (power === 'horn') elShove.classList.add('power-horn');
   if (power === 'gun') elShove.classList.add('power-gun');
+  if (power === 'bomb') elShove.classList.add('power-bomb');
   const wait = waitingPower();
   elShoveHint.textContent = wait ? 'THEN ' + POWERS[wait].name : 'SPACE';
-  if (powerQ.length) {
-    elShoveQ.textContent = '+' + powerQ.length;
+  const extra = powerQ.length - (gunT > 0 ? 0 : (power === 'shoulder' ? 0 : 1));
+  if (extra > 0) {
+    elShoveQ.textContent = '+' + extra;
     elShoveQ.classList.remove('hide');
   } else elShoveQ.classList.add('hide');
-  batProp.visible = cartRush > 0;
-  hornProp.visible = scareT > 0 && power !== 'gun';
+  batProp.visible = power === 'cart' || cartRush > 0;
+  hornProp.visible = power === 'horn' || scareT > 0;
   gunProp.visible = power === 'gun' || gunT > 0;
 }
 function setPower(next: string) {
   powerQ.length = 0;
   if (next !== 'shoulder' && next !== 'gun') powerQ.push(next);
+  if (next === 'gun') powerQ.push('gun');
   refreshPowerHud();
 }
 function collectPower(kind: string) {
-  if (kind === 'gun') {
-    startGun(gunT > 0);
+  if (kind === 'gun' && gunT > 0) {
+    startGun(true);
     return;
   }
-  if (gunT > 0) {
-    powerQ.push(kind);
-    refreshPowerHud();
-    flash(POWERS[kind].name + ' QUEUED', '#' + PICK_COL[kind].toString(16).padStart(6, '0'));
-    return;
-  }
-  fireWeapon(kind);
-}
-function flushWeaponQueue() {
-  const pending = powerQ.splice(0, powerQ.length);
+  powerQ.push(kind);
   refreshPowerHud();
-  for (const k of pending) fireWeapon(k);
+  const hex = '#' + PICK_COL[kind].toString(16).padStart(6, '0');
+  if (gunT > 0 || powerQ.length > 1) flash(POWERS[kind].name + ' QUEUED', hex);
+  else flash(POWERS[kind].name + ' READY', hex);
+}
+function consumeReadyPower() {
+  if (powerQ[0]) powerQ.shift();
+  refreshPowerHud();
 }
 
 // ---------- spawning ----------
@@ -1176,8 +1178,19 @@ function fireWeapon(kind: string) {
 function doShove() {
   if (state !== S.play) return;
   if (gunT > 0) return;
-  if (shoveCd > 0) return;
   audioResume();
+  const ready = peekPower();
+  if (ready === 'gun') {
+    consumeReadyPower();
+    startGun(false);
+    return;
+  }
+  if (ready === 'bomb' || ready === 'cart' || ready === 'horn') {
+    consumeReadyPower();
+    fireWeapon(ready);
+    return;
+  }
+  if (shoveCd > 0) return;
   const p = POWERS.shoulder;
   shoveCd = p.cd; lastCd = p.cd;
   playPower('shoulder');
@@ -1252,7 +1265,7 @@ function enterLevel2() {
   elCurtain.classList.add('hide');
   elShove.classList.remove('hide');
   state = S.play;
-  flushWeaponQueue();
+  refreshPowerHud();
   invuln = Math.max(invuln, 1.35);
 }
 
@@ -1367,8 +1380,8 @@ function tick(now: number) {
     player.rotation.z = -lean * STEER_LEAN;
     player.rotation.y = lean * STEER_YAW;
     gait(player, now * 0.014, 0.55);
-    batProp.visible = cartRush > 0;
-    hornProp.visible = scareT > 0;
+    batProp.visible = power === 'cart' || cartRush > 0;
+    hornProp.visible = power === 'horn' || scareT > 0;
 
     for (const s of scroll) {
       s.position.z += speed * dt;
@@ -1397,11 +1410,14 @@ function tick(now: number) {
       if (gunCd <= 0) { fireGun(); gunCd = GUN_RATE; }
       if (gunT <= 0) {
         gunT = 0;
-        if (powerQ.length) flushWeaponQueue();
-        else refreshPowerHud();
+        refreshPowerHud();
+        if (power !== 'shoulder') {
+          flash(POWERS[power].name + ' READY', '#' + PICK_COL[power].toString(16).padStart(6, '0'));
+        }
       }
     } else {
-      (elCool as HTMLElement).style.transform = 'scaleY(' + shoveCd / lastCd + ')';
+      const cooling = power === 'shoulder' ? shoveCd / lastCd : 0;
+      (elCool as HTMLElement).style.transform = 'scaleY(' + cooling + ')';
     }
     if (invuln > 0) invuln -= dt;
     if (cartRush > 0) { cartRush -= dt; if (cartRush < 0) cartRush = 0; }
