@@ -941,28 +941,24 @@ function flash(msg: string, color: string) {
   elFlash.classList.remove('show'); void (elFlash as HTMLElement).offsetWidth; elFlash.classList.add('show');
 }
 function peekPower(): string {
-  return gunT > 0 ? 'gun' : (powerQ[0] || 'shoulder');
+  return gunT > 0 ? 'gun' : 'shoulder';
 }
 function waitingPower(): string {
-  return powerQ[gunT > 0 ? 0 : 1] || '';
+  return powerQ[0] || '';
 }
 function refreshPowerHud() {
   power = peekPower();
   if (gunT <= 0) elShoveName.textContent = POWERS[power].name;
   elShove.classList.remove('power-cart', 'power-horn', 'power-gun', 'power-bomb');
-  if (power === 'cart') elShove.classList.add('power-cart');
-  if (power === 'horn') elShove.classList.add('power-horn');
   if (power === 'gun') elShove.classList.add('power-gun');
-  if (power === 'bomb') elShove.classList.add('power-bomb');
   const wait = waitingPower();
   elShoveHint.textContent = wait ? 'THEN ' + POWERS[wait].name : 'SPACE';
-  const held = powerQ.length + (gunT > 0 ? 1 : 0);
-  if (held > 1) {
-    elShoveQ.textContent = '+' + (held - 1);
+  if (powerQ.length) {
+    elShoveQ.textContent = '+' + powerQ.length;
     elShoveQ.classList.remove('hide');
   } else elShoveQ.classList.add('hide');
-  batProp.visible = power === 'cart' || cartRush > 0;
-  hornProp.visible = power === 'horn';
+  batProp.visible = cartRush > 0;
+  hornProp.visible = scareT > 0 && power !== 'gun';
   gunProp.visible = power === 'gun' || gunT > 0;
 }
 function setPower(next: string) {
@@ -970,20 +966,23 @@ function setPower(next: string) {
   if (next !== 'shoulder' && next !== 'gun') powerQ.push(next);
   refreshPowerHud();
 }
-function queuePower(kind: string) {
+function collectPower(kind: string) {
   if (kind === 'gun') {
     startGun(gunT > 0);
     return;
   }
-  powerQ.push(kind);
-  refreshPowerHud();
-  const hex = '#' + PICK_COL[kind].toString(16).padStart(6, '0');
-  if (gunT > 0 || powerQ.length > 1) flash(POWERS[kind].name + ' QUEUED', hex);
-  else flash(POWERS[kind].name + ' READY', hex);
+  if (gunT > 0) {
+    powerQ.push(kind);
+    refreshPowerHud();
+    flash(POWERS[kind].name + ' QUEUED', '#' + PICK_COL[kind].toString(16).padStart(6, '0'));
+    return;
+  }
+  fireWeapon(kind);
 }
-function consumeReadyPower() {
-  if (powerQ[0] === power) powerQ.shift();
+function flushWeaponQueue() {
+  const pending = powerQ.splice(0, powerQ.length);
   refreshPowerHud();
+  for (const k of pending) fireWeapon(k);
 }
 
 // ---------- spawning ----------
@@ -1114,44 +1113,41 @@ function startGun(stack = false) {
   }
   refreshPowerHud();
 }
-function detonate() {
-  audioResume();
-  playPower('bomb');
-  scareT = 0.45;
-  (scareRing.material as THREE.MeshBasicMaterial).color.setHex(0xff4466);
-  scareRing.position.set(player.position.x, 0.08, player.position.z - 2);
-  let got = 0;
-  for (const z of pool) {
-    if (!z.active || z.userData.knocked) continue;
-    knockOff(z, z.position.x - player.position.x, 'bomb');
-    got++;
-  }
-  if (got) {
-    combo += got; bestCombo = Math.max(bestCombo, combo);
-    flash('BOOM! +' + got * 20, '#ff4466');
-    score(got * 20);
-  } else flash('BOOM!', '#ff4466');
-  shake = Math.min(shake + 0.85, 1);
-  shoveCd = POWERS.bomb.cd; lastCd = POWERS.bomb.cd;
-  consumeReadyPower();
-}
-function doShove() {
+function fireWeapon(kind: string) {
   if (state !== S.play) return;
-  if (gunT > 0) return;
   audioResume();
-  if (power === 'gun') { startGun(); return; }
-  if (power === 'bomb') { detonate(); return; }
-  if (shoveCd > 0) return;
-  const p = POWERS[power];
-  const fx = power === 'shoulder' ? 'shove' : power;
-  shoveCd = p.cd; lastCd = p.cd;
-  playPower(power);
+  if (kind === 'gun') { startGun(gunT > 0); return; }
+  if (kind === 'bomb') {
+    playPower('bomb');
+    scareT = 0.45;
+    (scareRing.material as THREE.MeshBasicMaterial).color.setHex(0xff4466);
+    scareRing.position.set(player.position.x, 0.08, player.position.z - 2);
+    let got = 0;
+    for (const z of pool) {
+      if (!z.active || z.userData.knocked) continue;
+      knockOff(z, z.position.x - player.position.x, 'bomb');
+      got++;
+    }
+    if (got) {
+      combo += got; bestCombo = Math.max(bestCombo, combo);
+      flash('BOOM! +' + got * 20, '#ff4466');
+      score(got * 20);
+    } else flash('BOOM!', '#ff4466');
+    shake = Math.min(shake + 0.85, 1);
+    refreshPowerHud();
+    return;
+  }
+  const p = POWERS[kind];
+  if (!p) return;
+  playPower(kind);
   if (p.rush) cartRush = p.rush;
-  if (power === 'horn') {
+  if (kind === 'horn') {
     scareT = 0.4;
     (scareRing.material as THREE.MeshBasicMaterial).color.setHex(0xffd24a);
     scareRing.position.set(player.position.x, 0.08, player.position.z - 2);
+    hornProp.visible = true;
   }
+  if (kind === 'cart') batProp.visible = true;
   let got = 0;
   for (const z of pool) {
     if (!z.active || z.userData.knocked) continue;
@@ -1159,16 +1155,36 @@ function doShove() {
     let hit = false;
     if (p.radial) hit = dz < 3 && dz > -p.reach && Math.hypot(dx, Math.min(0, dz)) < p.halfW;
     else hit = dz < 0.5 && dz > -p.reach && Math.abs(dx) < p.halfW;
-    if (hit) { knockOff(z, dx, fx); got++; }
+    if (hit) { knockOff(z, dx, kind); got++; }
   }
   if (got) {
     combo += got; bestCombo = Math.max(bestCombo, combo);
-    flash(p.yell + ' +' + got * 15, power === 'horn' ? '#ffd24a' : power === 'cart' ? '#7fd0ff' : 'var(--accent)');
+    flash(p.yell + ' +' + got * 15, kind === 'horn' ? '#ffd24a' : kind === 'cart' ? '#7fd0ff' : 'var(--accent)');
+    score(got * 15);
+  } else flash(p.yell, kind === 'horn' ? '#ffd24a' : kind === 'cart' ? '#7fd0ff' : 'var(--accent)');
+  shake = Math.min(shake + p.shake, 0.85);
+  refreshPowerHud();
+}
+function doShove() {
+  if (state !== S.play) return;
+  if (gunT > 0) return;
+  if (shoveCd > 0) return;
+  audioResume();
+  const p = POWERS.shoulder;
+  shoveCd = p.cd; lastCd = p.cd;
+  playPower('shoulder');
+  let got = 0;
+  for (const z of pool) {
+    if (!z.active || z.userData.knocked) continue;
+    const dz = z.position.z - player.position.z, dx = z.position.x - player.position.x;
+    if (dz < 0.5 && dz > -p.reach && Math.abs(dx) < p.halfW) { knockOff(z, dx, 'shove'); got++; }
+  }
+  if (got) {
+    combo += got; bestCombo = Math.max(bestCombo, combo);
+    flash(p.yell + ' +' + got * 15, 'var(--accent)');
     score(got * 15);
   }
   shake = Math.min(shake + p.shake, 0.85);
-  if (power !== 'shoulder') consumeReadyPower();
-  batProp.visible = cartRush > 0;
 }
 function score(n: number) { scoreAcc += n; }
 
@@ -1205,14 +1221,14 @@ function enterLevel2() {
   for (const b of bullets) { b.active = false; b.visible = false; }
   buildWorld(2);
   spawnTimer = 0.45; pickTimer = 2.4;
-  spawnWave();
-  invuln = Math.max(invuln, 1.35);
   cartRush = 0; scareT = 0;
+  spawnWave();
   elCurtain.classList.remove('show');
   elCurtain.classList.add('hide');
   elShove.classList.remove('hide');
   state = S.play;
-  flash('BOARDWALK', '#7eb7e0');
+  flushWeaponQueue();
+  invuln = Math.max(invuln, 1.35);
 }
 
 // ---------- lifecycle ----------
@@ -1306,8 +1322,8 @@ function tick(now: number) {
     player.rotation.z = -lean * STEER_LEAN;
     player.rotation.y = lean * STEER_YAW;
     gait(player, now * 0.014, 0.55);
-    batProp.visible = power === 'cart' || cartRush > 0;
-    hornProp.visible = power === 'horn';
+    batProp.visible = cartRush > 0;
+    hornProp.visible = scareT > 0;
 
     for (const s of scroll) {
       s.position.z += speed * dt;
@@ -1336,10 +1352,8 @@ function tick(now: number) {
       if (gunCd <= 0) { fireGun(); gunCd = GUN_RATE; }
       if (gunT <= 0) {
         gunT = 0;
-        refreshPowerHud();
-        if (power !== 'shoulder') {
-          flash(POWERS[power].name + ' READY', '#' + PICK_COL[power].toString(16).padStart(6, '0'));
-        }
+        if (powerQ.length) flushWeaponQueue();
+        else refreshPowerHud();
       }
     } else {
       (elCool as HTMLElement).style.transform = 'scaleY(' + shoveCd / lastCd + ')';
@@ -1379,7 +1393,7 @@ function tick(now: number) {
         pk.active = false; pk.visible = false;
         const kind = pk.userData.kind;
         sfxPickup(kind);
-        queuePower(kind);
+        collectPower(kind);
       }
     }
 
