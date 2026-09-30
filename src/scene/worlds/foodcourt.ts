@@ -111,6 +111,14 @@ function makeFoodIcon(kind: string): any {
   }
   return g;
 }
+const texMatCache = new Map<any, THREE.MeshBasicMaterial>();
+// One shared unlit material per texture, so identical signs batch together.
+function texMat(map: any, side: THREE.Side = THREE.FrontSide) {
+  const key = map.uuid + ':' + side;
+  let m = texMatCache.get(key);
+  if (!m) { m = new THREE.MeshBasicMaterial({ map, side }); texMatCache.set(key, m); }
+  return m;
+}
 const matNeon = new THREE.MeshBasicMaterial({ color: 0xffd27a });
 const matGlass = new THREE.MeshLambertMaterial({ color: 0xbfe4f0, transparent: true, opacity: 0.32 });
 const FC_W = 5.7;
@@ -131,11 +139,11 @@ function buildStall(g: any, s: number, zc: number, st: any, i: number) {
     slab.position.set(s * (FC_W - 0.7), 3.05, zc - 4.3 + L * (k + 0.5));
     slab.rotation.z = s * 0.3; g.add(slab);
   }
-  const board = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.05), new THREE.MeshBasicMaterial({ map: menuTex(i + (st.name.length)) }));
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.05), texMat(menuTex(i + (st.name.length))));
   board.position.set(s * (FC_W - 0.03), 2.05, zc); board.rotation.y = -s * Math.PI / 2; g.add(board);
   const sign = new THREE.Mesh(
     new THREE.PlaneGeometry(3.8, 0.95),
-    new THREE.MeshBasicMaterial({ map: labelTex(st.name, st.bg, st.fg, 256, 64, '#ffffff') }),
+    texMat(labelTex(st.name, st.bg, st.fg, 256, 64, '#ffffff')),
   );
   sign.position.set(s * (FC_W - 0.04), 3.85, zc); sign.rotation.y = -s * Math.PI / 2; g.add(sign);
   const icon = makeFoodIcon(st.icon);
@@ -168,7 +176,7 @@ function buildSeating(g: any, s: number, zs: number, i: number) {
   });
   const poster = new THREE.Mesh(
     new THREE.PlaneGeometry(3.4, 0.9),
-    new THREE.MeshBasicMaterial({ map: labelTex('MEAL DEAL $5', '#ffd24a', '#7a1f14', 256, 64, '#d6402f') }),
+    texMat(labelTex('MEAL DEAL $5', '#ffd24a', '#7a1f14', 256, 64, '#d6402f')),
   );
   poster.position.set(s * (FC_W - 0.03), 2.5, zs); poster.rotation.y = -s * Math.PI / 2; g.add(poster);
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.5, 8), cmat(0xb8683a));
@@ -201,7 +209,7 @@ export function makeFoodCourtSegment(i: number): any {
   if (i % 5 === 0) {
     const banner = new THREE.Mesh(
       new THREE.PlaneGeometry(7, 1.2),
-      new THREE.MeshBasicMaterial({ map: labelTex('★ FOOD COURT ★', '#d6402f', '#ffe27a', 384, 64, '#ffe27a'), side: THREE.DoubleSide }),
+      texMat(labelTex('★ FOOD COURT ★', '#d6402f', '#ffe27a', 384, 64, '#ffe27a'), THREE.DoubleSide),
     );
     banner.position.set(0, 7.2, 0); g.add(banner);
     [-3.3, 3.3].forEach((x) => {

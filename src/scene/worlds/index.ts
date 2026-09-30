@@ -6,6 +6,7 @@ import { G } from '../../state';
 import { makeAisleSegment } from './aisle';
 import { makeBeachSegment } from './beach';
 import { makeFoodCourtSegment } from './foodcourt';
+import { mergeStatic, disposeSegment } from './merge';
 import { makeStreetSegment } from './street';
 
 // ---------- aisle ----------
@@ -54,13 +55,14 @@ function setTheme(lv: number) {
   }
 }
 function makeWorldSeg(lv: number, i: number) {
-  if (lv === 4) return makeBeachSegment(i);
-  if (lv === 3) return makeFoodCourtSegment(i);
-  if (lv === 2) return makeStreetSegment(i);
-  return makeAisleSegment(i);
+  const raw = lv === 4 ? makeBeachSegment(i)
+    : lv === 3 ? makeFoodCourtSegment(i)
+    : lv === 2 ? makeStreetSegment(i)
+    : makeAisleSegment(i);
+  return mergeStatic(raw); // a few merged meshes instead of dozens of small ones
 }
 export function buildWorld(lv: number) {
-  for (const s of scroll) scene.remove(s);
+  for (const s of scroll) { scene.remove(s); disposeSegment(s); }
   scroll.length = 0;
   for (let i = 0; i < SEG_N; i++) {
     const s = makeWorldSeg(lv, i);
