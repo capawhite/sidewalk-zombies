@@ -45,3 +45,7 @@ Spawns always leave at least one open slot, so every wall is passable.
 ## Character models
 
 The people are rigged glTF bodies by [Quaternius](https://quaternius.com) (CC0, via [poly.pizza](https://poly.pizza)): Man, Woman Casual, Woman in Tank Top and Woman in Dress. `public/models/*.glb` are trimmed copies (mesh, skeleton, and only the Idle/Walk/Run clips); `tools/prep-characters.mjs` documents how they were produced. The phone poses (calling, texting, filming, influencer, scared) are not in the source animations. They are solved from wrist targets with a small IK at load time and played as extra clips on top of the walk cycle (`src/entities/character/kit.ts`).
+
+## Environments
+
+Each scene paints its signs, products and shop fronts into one canvas atlas (`src/scene/art/`) so the textured scenery shares a single material and merges into a handful of instanced meshes (`src/scene/worlds/strip.ts`). The aisle, boardwalk, food court and beach are built from a few repeating modules; the playable lane is left calm and low-contrast.
