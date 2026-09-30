@@ -4,6 +4,8 @@
 //  1. Every mesh with a plain colour material (no texture, no transparency) has its colour baked into a
 //     per-vertex colour attribute. All of those can then share ONE vertex-colour material per type.
 //  2. Meshes are grouped by (material, side, shadow flags) and their geometry is merged in segment space.
+//  3. Optionally, vertical surfaces are darkened near the ground (baked contact shadow / ambient occlusion).
+//     This only touches vertex colours, so it costs nothing at run time.
 //
 // Call it once on a segment right after building it. Nothing in a segment may animate individually
 // afterwards: the whole segment scrolls as one group.
@@ -35,6 +37,7 @@ function vertexColorMaterial(p: Plain): THREE.Material {
 
 function plainOf(m: THREE.Material): Plain | null {
   if (m.transparent || m.opacity < 1) return null;
+  if ((m as THREE.MeshStandardMaterial).vertexColors) return null; // brings its own vertex colours
   if (m instanceof THREE.MeshBasicMaterial && !m.map) {
     return { kind: 'basic', side: m.side, roughness: 1, metalness: 0 };
   }
@@ -51,7 +54,28 @@ interface Bucket {
   geos: THREE.BufferGeometry[];
 }
 
-export function mergeStatic(segment: THREE.Group): THREE.Group {
+export interface MergeOptions {
+  // Vertical faces get darker toward y = 0: full strength at the floor, none at `height`.
+  groundAO?: { height: number; strength: number };
+}
+
+function smoothstep(t: number) {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+}
+
+function applyGroundAO(geo: THREE.BufferGeometry, height: number, strength: number) {
+  const pos = geo.getAttribute('position');
+  const normal = geo.getAttribute('normal');
+  const color = geo.getAttribute('color') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(normal.getY(i)) > 0.5) continue; // floors, ceilings and shelf tops are not "walls"
+    const k = 1 - strength * (1 - smoothstep(pos.getY(i) / height));
+    color.setXYZ(i, color.getX(i) * k, color.getY(i) * k, color.getZ(i) * k);
+  }
+}
+
+export function mergeStatic(segment: THREE.Group, options: MergeOptions = {}): THREE.Group {
   segment.updateMatrixWorld(true);
   const buckets = new Map<string, Bucket>();
 
@@ -69,8 +93,14 @@ export function mergeStatic(segment: THREE.Group): THREE.Group {
 
     let geo = obj.geometry.index ? obj.geometry.clone() : obj.geometry.toNonIndexed();
     // Keep only the attributes every merged geometry is guaranteed to share.
+    const ownColors = !plain && (src as THREE.MeshStandardMaterial).vertexColors;
     for (const name of Object.keys(geo.attributes)) {
-      if (name !== 'position' && name !== 'normal' && name !== 'uv') geo.deleteAttribute(name);
+      if (name === 'position' || name === 'normal' || name === 'uv') continue;
+      if (name === 'color' && ownColors) continue;
+      geo.deleteAttribute(name);
+    }
+    if (ownColors && !geo.getAttribute('color')) {
+      geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(geo.getAttribute('position').count * 3).fill(1), 3));
     }
     if (!geo.getAttribute('uv')) {
       geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.getAttribute('position').count * 2), 2));
@@ -82,6 +112,9 @@ export function mergeStatic(segment: THREE.Group): THREE.Group {
       const colors = new Float32Array(count * 3);
       for (let i = 0; i < count; i++) { colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b; }
       geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    }
+    if (options.groundAO && geo.getAttribute('color')) {
+      applyGroundAO(geo, options.groundAO.height, options.groundAO.strength);
     }
     bucket.geos.push(geo);
     // The original per-mesh geometry is never rendered again.

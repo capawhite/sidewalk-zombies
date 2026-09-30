@@ -10,12 +10,20 @@ import { G } from '../../state';
 import { makeAisleSegment } from './aisle';
 import { makeBeachSegment } from './beach';
 import { makeFoodCourtSegment } from './foodcourt';
-import { mergeStatic } from './merge';
+import { MergeOptions, mergeStatic } from './merge';
 import { Strip, buildStrip, disposeStrip, scrollStrip } from './strip';
 import { makeStreetSegment } from './street';
 
 // How many distinct segments each level builds; the ring of SEG_N segments repeats them (see strip.ts).
 const VARIANTS = 3;
+
+// Baked contact shadow on vertical surfaces, per level.
+const MERGE_OPTIONS: Record<number, MergeOptions> = {
+  1: { groundAO: { height: 0.9, strength: 0.4 } },
+  2: { groundAO: { height: 1.4, strength: 0.35 } },
+  3: { groundAO: { height: 1.2, strength: 0.35 } },
+  4: {},
+};
 
 let strip: Strip | null = null;
 
@@ -45,12 +53,12 @@ function makeVariant(lv: number, v: number) {
     : lv === 3 ? makeFoodCourtSegment(v)
     : lv === 2 ? makeStreetSegment(v)
     : makeAisleSegment(v);
-  return mergeStatic(raw); // a few merged meshes instead of dozens of small ones
+  return mergeStatic(raw, MERGE_OPTIONS[lv]); // a few merged meshes instead of dozens of small ones
 }
 export function buildWorld(lv: number) {
   if (strip) disposeStrip(strip);
   const variants = Array.from({ length: VARIANTS }, (_, v) => makeVariant(lv, v));
-  strip = buildStrip(variants);
+  strip = buildStrip(variants, (LOOKS[lv] ?? LOOKS[1]).fogFar);
   scene.add(strip.group);
   G.worldLevel = lv;
   setTheme(lv);
