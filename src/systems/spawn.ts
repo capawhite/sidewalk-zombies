@@ -73,7 +73,7 @@ function spawnZombie(x: number, type: string, zPos?: number) {
   z.userData.knockVx = 0; z.userData.knockVy = 0; z.userData.fx = '';
   z.position.set(x, 0, zPos ?? (SPAWN_Z + rand() * 3));
   z.rotation.set(0, 0, 0);
-  if (type !== 'inf') (z.userData.body.material as THREE.MeshLambertMaterial).color.setHex(def.color);
+  if (type !== 'inf') (z.userData.body.material as THREE.MeshStandardMaterial).color.setHex(def.color);
   applyPose(z, type);
 }
 export function spawnPickup() {

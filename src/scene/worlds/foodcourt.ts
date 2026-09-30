@@ -1,7 +1,7 @@
 // Level 3: food court.
 import * as THREE from 'three';
 import { AISLE_W, SEG_LEN } from '../../config';
-import { cmat } from '../../render/materials';
+import { cmat, mat, pbr } from '../../render/materials';
 import { matPalm } from './street';
 
 // ---------- food court ----------
@@ -55,7 +55,7 @@ function fcFloorMat() {
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set((AISLE_W + 10) / 2, SEG_LEN / 2);
-  fcFloor = new THREE.MeshLambertMaterial({ map: t });
+  fcFloor = pbr({ map: t, roughness: 0.3 });
   return fcFloor;
 }
 const FC_STALLS: any[] = [
@@ -87,7 +87,7 @@ function makeFoodIcon(kind: string): any {
   } else if (kind === 'taco') {
     const s = add(new THREE.CylinderGeometry(0.4, 0.4, 0.6, 12, 1, true, 0, Math.PI), 0xf0c14b, 0, 0.36, 0);
     s.rotation.set(Math.PI / 2, 0, Math.PI / 2);
-    (s.material as any) = new THREE.MeshLambertMaterial({ color: 0xf0c14b, side: THREE.DoubleSide });
+    (s.material as any) = mat(0xf0c14b, { side: THREE.DoubleSide });
     add(new THREE.SphereGeometry(0.22, 7, 5), 0x4a9d6e, 0, 0.42, 0);
     add(new THREE.SphereGeometry(0.11, 6, 5), 0xd6402f, 0.15, 0.5, 0.1);
   } else if (kind === 'sushi') {
@@ -120,7 +120,7 @@ function texMat(map: any, side: THREE.Side = THREE.FrontSide) {
   return m;
 }
 const matNeon = new THREE.MeshBasicMaterial({ color: 0xffd27a });
-const matGlass = new THREE.MeshLambertMaterial({ color: 0xbfe4f0, transparent: true, opacity: 0.32 });
+const matGlass = pbr({ color: 0xbfe4f0, transparent: true, opacity: 0.32, roughness: 0.1 });
 const FC_W = 5.7;
                     // inner face of the food-court walls
 function buildStall(g: any, s: number, zc: number, st: any, i: number) {

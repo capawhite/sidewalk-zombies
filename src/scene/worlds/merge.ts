@@ -9,28 +9,38 @@
 // afterwards: the whole segment scrolls as one group.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { pbr } from '../../render/materials';
 
-type PlainKind = 'lambert' | 'basic';
+// A "plain" material is just a colour: no texture, no transparency, no emission.
+interface Plain {
+  kind: 'standard' | 'basic';
+  side: THREE.Side;
+  roughness: number;
+  metalness: number;
+}
 
-// One shared vertex-colour material per (kind, side). Never disposed: they live for the whole session.
+// One shared vertex-colour material per distinct Plain description. Never disposed: they live for the whole session.
 const vertexMats = new Map<string, THREE.Material>();
-function vertexColorMaterial(kind: PlainKind, side: THREE.Side): THREE.Material {
-  const key = kind + ':' + side;
+function vertexColorMaterial(p: Plain): THREE.Material {
+  const key = [p.kind, p.side, p.roughness, p.metalness].join(':');
   let m = vertexMats.get(key);
   if (!m) {
-    m = kind === 'basic'
-      ? new THREE.MeshBasicMaterial({ vertexColors: true, side })
-      : new THREE.MeshLambertMaterial({ vertexColors: true, side });
+    m = p.kind === 'basic'
+      ? new THREE.MeshBasicMaterial({ vertexColors: true, side: p.side })
+      : pbr({ vertexColors: true, side: p.side, roughness: p.roughness, metalness: p.metalness });
     vertexMats.set(key, m);
   }
   return m;
 }
 
-// Returns the kind if this material is "just a colour" and can be baked into vertex colours.
-function plainKind(m: THREE.Material): PlainKind | null {
+function plainOf(m: THREE.Material): Plain | null {
   if (m.transparent || m.opacity < 1) return null;
-  if (m instanceof THREE.MeshBasicMaterial && !m.map) return 'basic';
-  if (m instanceof THREE.MeshLambertMaterial && !m.map && m.emissive.getHex() === 0) return 'lambert';
+  if (m instanceof THREE.MeshBasicMaterial && !m.map) {
+    return { kind: 'basic', side: m.side, roughness: 1, metalness: 0 };
+  }
+  if (m instanceof THREE.MeshStandardMaterial && !m.map && !m.normalMap && !m.roughnessMap && m.emissive.getHex() === 0) {
+    return { kind: 'standard', side: m.side, roughness: m.roughness, metalness: m.metalness };
+  }
   return null;
 }
 
@@ -48,8 +58,8 @@ export function mergeStatic(segment: THREE.Group): THREE.Group {
   segment.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
     const src = obj.material as THREE.Material;
-    const kind = plainKind(src);
-    const material = kind ? vertexColorMaterial(kind, src.side) : src;
+    const plain = plainOf(src);
+    const material = plain ? vertexColorMaterial(plain) : src;
     const key = material.uuid + ':' + obj.castShadow + ':' + obj.receiveShadow;
     let bucket = buckets.get(key);
     if (!bucket) {
@@ -66,7 +76,7 @@ export function mergeStatic(segment: THREE.Group): THREE.Group {
       geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.getAttribute('position').count * 2), 2));
     }
     geo.applyMatrix4(obj.matrixWorld);
-    if (kind) {
+    if (plain) {
       const c = (src as THREE.MeshBasicMaterial).color;
       const count = geo.getAttribute('position').count;
       const colors = new Float32Array(count * 3);
