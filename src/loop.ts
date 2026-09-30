@@ -19,7 +19,10 @@ import { updateTimers } from './systems/timers';
 import { updateZombies } from './systems/zombies';
 
 // ---------- loop ----------
+let looping = true;
+
 export function tick(now: number) {
+  if (document.hidden) { looping = false; return; }
   requestAnimationFrame(tick);
   let dt = (now - G.last) / 1000; G.last = now;
   if (dt < 0) dt = 0;
@@ -28,6 +31,13 @@ export function tick(now: number) {
   draw(dt);
   updatePerf(dt);
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || looping) return;
+  looping = true;
+  G.last = performance.now();
+  requestAnimationFrame(tick);
+});
 
 // Draw the current state (the replay harness and dev tools call this too).
 export function draw(dt: number) {

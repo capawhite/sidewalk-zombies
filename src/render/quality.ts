@@ -18,7 +18,7 @@ export interface QualitySettings {
 }
 
 const SETTINGS: Record<Tier, QualitySettings> = {
-  low: { maxPixelRatio: 1.25, postProcessing: false, bloom: false, lut: false, msaaSamples: 0, shadows: false, shadowMapSize: 512, envMap: true, normalMaps: false },
+  low: { maxPixelRatio: 1.25, postProcessing: false, bloom: false, lut: false, msaaSamples: 0, shadows: false, shadowMapSize: 512, envMap: false, normalMaps: false },
   medium: { maxPixelRatio: 1.5, postProcessing: true, bloom: true, lut: true, msaaSamples: 2, shadows: true, shadowMapSize: 1024, envMap: true, normalMaps: true },
   high: { maxPixelRatio: 2, postProcessing: true, bloom: true, lut: true, msaaSamples: 4, shadows: true, shadowMapSize: 2048, envMap: true, normalMaps: true },
 };

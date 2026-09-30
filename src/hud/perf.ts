@@ -26,6 +26,15 @@ if (new URLSearchParams(location.search).has('perf')) setVisible(true);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyP') setVisible(!visible);
 });
+// Phones have no P key: five taps in the top-left corner toggle the overlay.
+let taps = 0, lastTap = 0;
+window.addEventListener('pointerdown', (e) => {
+  if (e.clientX > 88 || e.clientY > 88) { taps = 0; return; }
+  const now = performance.now();
+  taps = now - lastTap > 1600 ? 1 : taps + 1;
+  lastTap = now;
+  if (taps >= 5) { setVisible(!visible); taps = 0; }
+});
 
 // Call once per rendered frame, after renderer.render(). dt is the real frame time in seconds.
 export function updatePerf(dt: number) {

@@ -54,7 +54,8 @@ export function updateZombies(dt: number, now: number) {
       z.position.x = d.baseX;
       z.rotation.y = 0;
     }
-    animatePerson(z, dt, d.type === 'selfie' ? 0.05 : d.type === 'text' ? 0.5 : d.type === 'inf' ? 0.28 : 0.35);
+    // Visual only: people the camera has already passed keep simulating, but their mixer can rest.
+    if (z.position.z < 12) animatePerson(z, dt, d.type === 'selfie' ? 0.05 : d.type === 'text' ? 0.5 : d.type === 'inf' ? 0.28 : 0.35);
 
     const dz = z.position.z - pz, dx = z.position.x - px;
     if (G.cartRush > 0 && Math.abs(dz) < 1.2 && Math.abs(dx) < 1.7) {
