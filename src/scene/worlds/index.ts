@@ -1,6 +1,5 @@
 // World builder: picks the segment generator and theme for each level.
 import * as THREE from 'three';
-import { SEG_LEN, SEG_N } from '../../config';
 import { setEnvironment } from '../../render/environment';
 import { setEnvIntensity } from '../../render/materials';
 import { setGrade } from '../../render/post';
@@ -11,19 +10,20 @@ import { G } from '../../state';
 import { makeAisleSegment } from './aisle';
 import { makeBeachSegment } from './beach';
 import { makeFoodCourtSegment } from './foodcourt';
-import { mergeStatic, disposeSegment } from './merge';
+import { mergeStatic } from './merge';
+import { Strip, buildStrip, disposeStrip, scrollStrip } from './strip';
 import { makeStreetSegment } from './street';
 
-// ---------- aisle ----------
-export const scroll: any[] = [];
+// How many distinct segments each level builds; the ring of SEG_N segments repeats them (see strip.ts).
+const VARIANTS = 3;
 
-// Slide every world segment toward the camera by dz, wrapping the far ones back to the start.
+let strip: Strip | null = null;
+
+// Slide the whole world toward the camera by dz.
 export function scrollWorld(dz: number) {
-  for (const s of scroll) {
-    s.position.z += dz;
-    if (s.position.z > SEG_LEN) s.position.z -= SEG_N * SEG_LEN;
-  }
+  if (strip) scrollStrip(strip, dz);
 }
+
 // Applies the lighting, fog, environment map and colour grade for a level.
 function setTheme(lv: number) {
   const look = LOOKS[lv] ?? LOOKS[1];
@@ -39,20 +39,19 @@ function setTheme(lv: number) {
   setEnvIntensity(look.envIntensity);
   setGrade(look.grade);
 }
-function makeWorldSeg(lv: number, i: number) {
-  const raw = lv === 4 ? makeBeachSegment(i)
-    : lv === 3 ? makeFoodCourtSegment(i)
-    : lv === 2 ? makeStreetSegment(i)
-    : makeAisleSegment(i);
+
+function makeVariant(lv: number, v: number) {
+  const raw = lv === 4 ? makeBeachSegment(v)
+    : lv === 3 ? makeFoodCourtSegment(v)
+    : lv === 2 ? makeStreetSegment(v)
+    : makeAisleSegment(v);
   return mergeStatic(raw); // a few merged meshes instead of dozens of small ones
 }
 export function buildWorld(lv: number) {
-  for (const s of scroll) { scene.remove(s); disposeSegment(s); }
-  scroll.length = 0;
-  for (let i = 0; i < SEG_N; i++) {
-    const s = makeWorldSeg(lv, i);
-    s.position.z = -i * SEG_LEN; scene.add(s); scroll.push(s);
-  }
+  if (strip) disposeStrip(strip);
+  const variants = Array.from({ length: VARIANTS }, (_, v) => makeVariant(lv, v));
+  strip = buildStrip(variants);
+  scene.add(strip.group);
   G.worldLevel = lv;
   setTheme(lv);
 }

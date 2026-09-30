@@ -100,10 +100,3 @@ export function mergeStatic(segment: THREE.Group): THREE.Group {
   }
   return out;
 }
-
-// Frees GPU buffers for a removed segment. Materials and textures are shared, so they stay alive.
-export function disposeSegment(segment: THREE.Object3D) {
-  segment.traverse((obj) => {
-    if (obj instanceof THREE.Mesh) obj.geometry.dispose();
-  });
-}
