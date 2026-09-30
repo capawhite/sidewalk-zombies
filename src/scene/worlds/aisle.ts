@@ -1,14 +1,19 @@
 // Level 1: supermarket aisle.
 import * as THREE from 'three';
 import { AISLE_W, COL, SEG_LEN, SHELF_X } from '../../config';
-import { mat } from '../../render/materials';
+import { glowColor, mat } from '../../render/materials';
+import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 
-const matFloor = mat(COL.floor);
+const matFloor = mat(COL.floor, {
+  roughness: 0.35,
+  normalMap: grainNormal('fine', (AISLE_W + 10) / 1.5, SEG_LEN / 1.5),
+  normalScale: SUBTLE_NORMAL,
+});
 const matGrout = mat(COL.grout);
 const matShelf = mat(COL.shelf);
-const matMetal = mat(COL.shelfMetal);
+const matMetal = mat(COL.shelfMetal, { roughness: 0.35, metalness: 0.6 });
 const matCeil = mat(COL.ceil);
-const matLight = new THREE.MeshBasicMaterial({ color: COL.light });
+const matLight = new THREE.MeshBasicMaterial({ color: glowColor(COL.light, 2.5) });
 const goodsMats = COL.goods.map((c) => mat(c));
 export function makeAisleSegment(i: number): any {
   const g = new THREE.Group();

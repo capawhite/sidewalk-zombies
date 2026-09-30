@@ -2,15 +2,23 @@
 import * as THREE from 'three';
 import { AISLE_W, BIKINIS, SEG_LEN, SHELF_X } from '../../config';
 import { mat } from '../../render/materials';
+import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 import { matPalm, matTrunk } from './street';
+
+const matSand = mat(0xe8d4a4, {
+  roughness: 1,
+  normalMap: grainNormal('coarse', (AISLE_W + 14) / 1.2, SEG_LEN / 1.2),
+  normalScale: SUBTLE_NORMAL,
+});
+const matWater = mat(0x3aa0c8, { roughness: 0.12, metalness: 0.05 });
 
 export function makeBeachSegment(i: number): any {
   const g = new THREE.Group();
-  const sand = new THREE.Mesh(new THREE.PlaneGeometry(AISLE_W + 14, SEG_LEN), mat(0xe8d4a4));
+  const sand = new THREE.Mesh(new THREE.PlaneGeometry(AISLE_W + 14, SEG_LEN), matSand);
   sand.rotation.x = -Math.PI / 2; sand.receiveShadow = true; g.add(sand);
   const wet = new THREE.Mesh(new THREE.PlaneGeometry(3.2, SEG_LEN), mat(0xd2c08a));
   wet.rotation.x = -Math.PI / 2; wet.position.set(-AISLE_W * 0.45, 0.01, 0); g.add(wet);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(8, SEG_LEN), mat(0x3aa0c8));
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(8, SEG_LEN), matWater);
   water.rotation.x = -Math.PI / 2; water.position.set(-AISLE_W * 0.5 - 4.4, -0.04, 0); g.add(water);
   [-1, 1].forEach((s) => {
     const umb = new THREE.Group();

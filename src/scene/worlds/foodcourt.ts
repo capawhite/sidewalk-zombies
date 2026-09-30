@@ -1,7 +1,8 @@
 // Level 3: food court.
 import * as THREE from 'three';
 import { AISLE_W, SEG_LEN } from '../../config';
-import { cmat, mat, pbr } from '../../render/materials';
+import { cmat, glowColor, mat, pbr } from '../../render/materials';
+import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 import { matPalm } from './street';
 
 // ---------- food court ----------
@@ -55,7 +56,12 @@ function fcFloorMat() {
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set((AISLE_W + 10) / 2, SEG_LEN / 2);
-  fcFloor = pbr({ map: t, roughness: 0.3 });
+  fcFloor = pbr({
+    map: t,
+    roughness: 0.3,
+    normalMap: grainNormal('fine', (AISLE_W + 10) / 1.5, SEG_LEN / 1.5),
+    normalScale: SUBTLE_NORMAL,
+  });
   return fcFloor;
 }
 const FC_STALLS: any[] = [
@@ -119,7 +125,7 @@ function texMat(map: any, side: THREE.Side = THREE.FrontSide) {
   if (!m) { m = new THREE.MeshBasicMaterial({ map, side }); texMatCache.set(key, m); }
   return m;
 }
-const matNeon = new THREE.MeshBasicMaterial({ color: 0xffd27a });
+const matNeon = new THREE.MeshBasicMaterial({ color: glowColor(0xffd27a, 3) });
 const matGlass = pbr({ color: 0xbfe4f0, transparent: true, opacity: 0.32, roughness: 0.1 });
 const FC_W = 5.7;
                     // inner face of the food-court walls

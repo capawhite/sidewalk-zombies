@@ -1,16 +1,25 @@
 // Level 2: boardwalk street.
 import * as THREE from 'three';
 import { AISLE_W, BIKINIS, COL, SEG_LEN, SHELF_X } from '../../config';
-import { mat } from '../../render/materials';
+import { glowColor, mat } from '../../render/materials';
+import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 
 const matSkyWin = new THREE.MeshBasicMaterial({ color: COL.window });
-const matRoad = mat(COL.road);
-const matWalk = mat(COL.walk);
+const matRoad = mat(COL.road, {
+  roughness: 0.9,
+  normalMap: grainNormal('coarse', (AISLE_W + 2) / 1.5, SEG_LEN / 1.5),
+  normalScale: SUBTLE_NORMAL,
+});
+const matWalk = mat(COL.walk, {
+  roughness: 0.8,
+  normalMap: grainNormal('fine', 4.6 / 1.5, SEG_LEN / 1.5),
+  normalScale: SUBTLE_NORMAL,
+});
 const matCurb = mat(COL.curb);
 export const matTrunk = mat(COL.trunk);
 export const matPalm = mat(COL.palm);
 const matBuild = COL.stucco.map((c) => mat(c));
-const matLamp = mat(0xf4e4b8);
+const matLamp = new THREE.MeshBasicMaterial({ color: glowColor(0xf4e4b8, 3) });
 const matPole = mat(0x4a4e56);
 export function makeStreetSegment(i: number): any {
   const g = new THREE.Group();
