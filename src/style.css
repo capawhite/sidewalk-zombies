@@ -184,6 +184,7 @@ button.play:hover{filter:brightness(1.05);}
 /* ---------- polish ---------- */
 #vig{position:absolute;inset:0;z-index:1;pointer-events:none;
   background:radial-gradient(ellipse at 50% 55%,transparent 52%,rgba(10,8,14,.34) 100%);}
+#wrap.postfx #vig{background:none;}
 #wrap.hot #vig{box-shadow:inset 0 0 90px rgba(255,120,30,.5);}
 #fx{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:#fff;}
 #fx.go{animation:fxFlash .38s ease-out;}

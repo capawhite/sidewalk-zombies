@@ -1,7 +1,8 @@
 // Game loop: one simulation step (frame) plus rendering (tick).
 import { elScore } from './hud/hud';
 import { updatePerf } from './hud/perf';
-import { camera, renderer, scene, wrap } from './render/renderer';
+import { renderFrame } from './render/post';
+import { camera, wrap } from './render/renderer';
 import { flapSeagulls } from './scene/seagulls';
 import { scrollWorld } from './scene/worlds';
 import { updateParts } from './render/fx';
@@ -23,7 +24,7 @@ export function tick(now: number) {
   if (dt < 0) dt = 0;
   if (dt > 0.05) dt = 0.05;
   frame(dt, now);
-  renderer.render(scene, camera);
+  renderFrame(dt);
   updatePerf(dt);
 }
 

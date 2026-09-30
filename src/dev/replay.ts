@@ -5,7 +5,10 @@ import { bullets, coinPool, pickPool, pool } from '../entities/pools';
 import { drawLives } from '../hud/hud';
 import { frame } from '../loop';
 import { parts } from '../render/fx';
+import { renderFrame } from '../render/post';
+import { setSkyColor } from '../render/sky';
 import { camera, renderer, scene } from '../render/renderer';
+import { LOOKS } from '../scene/looks';
 import { buildWorld } from '../scene/worlds';
 import { G, S, keys } from '../state';
 import { setRandomSource } from '../util';
@@ -59,5 +62,5 @@ function runReplay(seed: number, frames: number) {
 if (new URLSearchParams(location.search).has('replay')) {
   (window as any).__replay = { run: runReplay };
   // Handles for console profiling (e.g. draw calls per world).
-  (window as any).__dbg = { renderer, scene, camera, buildWorld, frame, start };
+  (window as any).__dbg = { renderer, scene, camera, buildWorld, frame, start, renderFrame, LOOKS, setSkyColor };
 }
