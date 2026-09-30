@@ -9,6 +9,7 @@ import { buildWorld } from '../scene/worlds';
 import { G, S, powerQ, stageOf } from '../state';
 import { refreshPowerHud } from './powers';
 import { spawnWave } from './spawn';
+import { rand } from '../util';
 
 function fillGlitz() {
   elGlitz.innerHTML = '';
@@ -18,9 +19,9 @@ function fillGlitz() {
     const s = document.createElement('span');
     s.className = 'spark';
     s.textContent = bits[i % bits.length];
-    s.style.left = (4 + Math.random() * 92) + '%';
-    s.style.animationDelay = (Math.random() * 1.6) + 's';
-    s.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+    s.style.left = (4 + rand() * 92) + '%';
+    s.style.animationDelay = (rand() * 1.6) + 's';
+    s.style.animationDuration = (1.8 + rand() * 1.4) + 's';
     s.style.color = cols[i % cols.length];
     s.style.fontSize = (11 + ((i * 7) % 16)) + 'px';
     elGlitz.appendChild(s);

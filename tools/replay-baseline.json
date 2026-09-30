@@ -1,8 +1,8 @@
 {
-  "note": "Open the game at /?replay on a fresh page load, then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. Baseline v2 was recorded after SEG_N went 10 -> 6: world building consumes Math.random, so fewer segments shifts the seeded stream. v1 (SEG_N=10, pre-refactor) was hash 1101932839, calls 130842, count 120; the refactor reproduced v1 exactly.",
+  "note": "Open the game at /?replay on a fresh page load, then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. v3: game randomness now goes through rand() in util.ts, so the seeded stream no longer includes three.js UUID draws and is independent of how the scene is built (verified: same hash with world merging on and off). Earlier baselines: v1 (SEG_N=10, pre-refactor) hash 1101932839 calls 130842; v2 (SEG_N=6) hash 1202051037 calls 125821. Both were reproduced by the refactor before rand() was introduced.",
   "seed": 1234,
   "frames": 7200,
-  "hash": 1202051037,
-  "calls": 125821,
+  "hash": 2905297158,
+  "calls": 108731,
   "count": 120
 }

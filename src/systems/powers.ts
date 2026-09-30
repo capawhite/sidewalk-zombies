@@ -8,6 +8,7 @@ import { PICK_COL, getBullet, pool } from '../entities/pools';
 import { drawArsenal, elShove, elShoveHint, elShoveName, flash } from '../hud/hud';
 import { FXC, FXW, fxBurst, hexCss, popAt, screenFlash } from '../render/fx';
 import { G, S, powerQ } from '../state';
+import { rand } from '../util';
 
 export function fireGun() {
   const b = getBullet();
@@ -63,27 +64,27 @@ export function knockOff(z: any, dx: number, fx: string) {
   d.knocked = true; d.tripT = 0; d.hit = true; d.fx = fx;
   const dir = dx === 0 ? (z.position.x >= 0 ? 1 : -1) : Math.sign(dx);
   if (fx === 'cart') {
-    d.knockVx = dir * (2 + Math.random() * 2);
+    d.knockVx = dir * (2 + rand() * 2);
     d.knockVy = CART_LAUNCH;
   } else if (fx === 'horn') {
-    d.knockVx = dir * (13 + Math.random() * 4);
+    d.knockVx = dir * (13 + rand() * 4);
     d.knockVy = 2;
     d.lArm.rotation.set(-2.5, 0, 0.3);
     d.rArm.rotation.set(-2.5, 0, -0.3);
   } else if (fx === 'gun') {
-    d.knockVx = dir * (3 + Math.random() * 2);
+    d.knockVx = dir * (3 + rand() * 2);
     d.knockVy = 6;
   } else if (fx === 'bomb') {
-    d.knockVx = (Math.random() - 0.5) * 22;
-    d.knockVy = 10 + Math.random() * 10;
+    d.knockVx = (rand() - 0.5) * 22;
+    d.knockVy = 10 + rand() * 10;
   } else {
-    d.knockVx = dir * (9 + Math.random() * 3);
+    d.knockVx = dir * (9 + rand() * 3);
     d.knockVy = 3.2;
   }
   if (d.phone) d.phone.visible = false;
   const fcol = FXC[fx] || 0xffffff;
   fxBurst(z.position.x, 1.1, z.position.z, fcol, fx === 'gun' ? 3 : fx === 'bomb' ? 4 : 9, fx === 'bomb' ? 7 : 4.5, 5);
-  if (fx === 'gun' ? Math.random() < 0.18 : fx === 'bomb' ? Math.random() < 0.25 : true) {
+  if (fx === 'gun' ? rand() < 0.18 : fx === 'bomb' ? rand() < 0.25 : true) {
     popAt(z.position.x, 2.1, z.position.z, FXW[fx] || 'BONK!', hexCss(fcol === 0xffffff ? 0xffe27a : fcol));
   }
 }

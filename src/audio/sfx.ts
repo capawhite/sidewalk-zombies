@@ -1,5 +1,6 @@
 // Sound effects.
 import { burst, tone } from './engine';
+import { rand } from '../util';
 
 function sfxShove() {
   tone(196, 0.05, 'square', 0.12);
@@ -18,7 +19,7 @@ function sfxHorn() {
   tone(262, 0.13, 'square', 0.07, 0.26);
 }
 export function sfxGun() {
-  tone(180 + Math.random() * 50, 0.028, 'square', 0.08);
+  tone(180 + rand() * 50, 0.028, 'square', 0.08);
   burst(0.025, 0.09, 2400, 0, 'highpass', 500);
 }
 function sfxBomb() {

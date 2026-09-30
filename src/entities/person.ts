@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { BIKINIS, COL, HAIR, LONG_HAIR, PANTS, SKINS } from '../config';
 import { mat } from '../render/materials';
+import { rand } from '../util';
 
 // ---------- people (low-poly adult, shared geos) ----------
 const GEO = {
@@ -30,9 +31,9 @@ function limb(geo: THREE.BufferGeometry, color: number, y: number) {
 }
 export function makePerson(shirtColor: number, isPlayer: boolean): any {
   const g: any = new THREE.Group();
-  const skin = isPlayer ? COL.playerSkin : SKINS[(Math.random() * SKINS.length) | 0];
-  const pants = isPlayer ? COL.playerPants : PANTS[(Math.random() * PANTS.length) | 0];
-  const hairC = isPlayer ? shirtColor : HAIR[(Math.random() * HAIR.length) | 0];
+  const skin = isPlayer ? COL.playerSkin : SKINS[(rand() * SKINS.length) | 0];
+  const pants = isPlayer ? COL.playerPants : PANTS[(rand() * PANTS.length) | 0];
+  const hairC = isPlayer ? shirtColor : HAIR[(rand() * HAIR.length) | 0];
 
   const blob = new THREE.Mesh(GEO.blob, matBlob);
   blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; g.add(blob);
@@ -111,10 +112,10 @@ export function makePerson(shirtColor: number, isPlayer: boolean): any {
 }
 export function makeInfluencer(): any {
   const g: any = new THREE.Group();
-  const female = Math.random() < 0.86;
-  const skin = SKINS[(Math.random() * SKINS.length) | 0];
-  const kit = BIKINIS[(Math.random() * BIKINIS.length) | 0];
-  const hairC = LONG_HAIR[(Math.random() * LONG_HAIR.length) | 0];
+  const female = rand() < 0.86;
+  const skin = SKINS[(rand() * SKINS.length) | 0];
+  const kit = BIKINIS[(rand() * BIKINIS.length) | 0];
+  const hairC = LONG_HAIR[(rand() * LONG_HAIR.length) | 0];
 
   const blob = new THREE.Mesh(GEO.blob, matBlob);
   blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; g.add(blob);

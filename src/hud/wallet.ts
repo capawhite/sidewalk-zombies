@@ -2,6 +2,7 @@
 import { sfxKaching, sfxWallet } from '../audio/sfx';
 import { G } from '../state';
 import { elFly, elWCount, elWNote, elWallet } from './hud';
+import { rand } from '../util';
 
 let walletTimers: number[] = [];
 export function clearWallet() {
@@ -22,7 +23,7 @@ export function runWallet() {
     const tx = wr.left + wr.width / 2 - fr.left - 10, ty = wr.top + 12 - fr.top - 10;
     for (let k = 0; k < n; k++) {
       const c = document.createElement('div'); c.className = 'fc';
-      const sx = 10 + Math.random() * Math.max(20, fr.width - 40), sy = Math.random() * 44;
+      const sx = 10 + rand() * Math.max(20, fr.width - 40), sy = rand() * 44;
       elFly.appendChild(c);
       c.animate([
         { transform: 'translate(' + sx + 'px,' + sy + 'px) scale(0)', opacity: 0 },

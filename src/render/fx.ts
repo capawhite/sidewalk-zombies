@@ -1,6 +1,7 @@
 // Particles, floating popups and screen flashes.
 import * as THREE from 'three';
 import { camera, scene, wrap } from './renderer';
+import { rand } from '../util';
 
 // ---------- juice: particles, popups, flashes ----------
 const elPops = document.getElementById('pops')!, elFx = document.getElementById('fx')!;
@@ -15,14 +16,14 @@ function getPart(): any {
 export function fxBurst(x: number, y: number, z: number, color: number, n: number, spd = 4, up = 4.5, life = 0.6) {
   for (let i = 0; i < n; i++) {
     const p = getPart(); if (!p) return;
-    p.active = true; p.visible = true; p.life = life * (0.7 + Math.random() * 0.6); p.maxLife = p.life;
+    p.active = true; p.visible = true; p.life = life * (0.7 + rand() * 0.6); p.maxLife = p.life;
     p.position.set(x, y, z);
-    const a = Math.random() * 6.283;
-    p.userData.vx = Math.cos(a) * spd * Math.random();
-    p.userData.vz = Math.sin(a) * spd * Math.random();
-    p.userData.vy = up * (0.4 + Math.random() * 0.7);
+    const a = rand() * 6.283;
+    p.userData.vx = Math.cos(a) * spd * rand();
+    p.userData.vz = Math.sin(a) * spd * rand();
+    p.userData.vy = up * (0.4 + rand() * 0.7);
     p.material.color.setHex(color); p.material.opacity = 1;
-    p.scale.setScalar(0.6 + Math.random() * 0.9);
+    p.scale.setScalar(0.6 + rand() * 0.9);
   }
 }
 export function updateParts(dt: number) {

@@ -11,6 +11,7 @@ import { buildWorld } from '../scene/worlds';
 import { G, S, powerQ } from '../state';
 import { setPower } from './powers';
 import { spawnWave } from './spawn';
+import { rand } from '../util';
 
 // ---------- lifecycle ----------
 export function start() {
@@ -86,9 +87,9 @@ export function gameOver(cause: string) {
     ],
   };
   const m = msgs[cause] || msgs.talk;
-  document.getElementById('overTitle')!.textContent = titles[(Math.random() * titles.length) | 0];
-  document.getElementById('verdict')!.textContent = newBest ? '\u2605 NEW BEST \u2605' : verdicts[(Math.random() * verdicts.length) | 0];
-  document.getElementById('overMsg')!.textContent = m[(Math.random() * m.length) | 0];
+  document.getElementById('overTitle')!.textContent = titles[(rand() * titles.length) | 0];
+  document.getElementById('verdict')!.textContent = newBest ? '\u2605 NEW BEST \u2605' : verdicts[(rand() * verdicts.length) | 0];
+  document.getElementById('overMsg')!.textContent = m[(rand() * m.length) | 0];
   document.getElementById('over')!.classList.remove('hide');
   sfxOver();
 }

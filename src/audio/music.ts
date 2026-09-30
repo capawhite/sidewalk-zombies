@@ -1,6 +1,7 @@
 // Chiptune music sequencer.
 import { G } from '../state';
 import { AC, musicGain, noiseBuf } from './engine';
+import { rand } from '../util';
 
 // ---------- chiptune music ----------
 const THEMES: any = {
@@ -37,7 +38,7 @@ function mNoise(t: number, dur: number, vol: number, ffreq: number) {
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   src.connect(f); f.connect(g); g.connect(musicGain);
-  src.start(t, Math.random()); src.stop(t + dur + 0.02);
+  src.start(t, rand()); src.stop(t + dur + 0.02);
 }
 function playStep(th: any, step: number, t: number, sd: number) {
   const bar = (step >> 4) & 3, st = step & 15;

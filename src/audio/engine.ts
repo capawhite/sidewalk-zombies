@@ -1,4 +1,5 @@
 // Web Audio context, master bus and basic synth voices.
+import { rand } from '../util';
 
 // ---------- audio ----------
 export let AC: AudioContext | null = null;
@@ -25,7 +26,7 @@ export function audioResume() {
       musicGain.connect(master);
       noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
       const data = noiseBuf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < data.length; i++) data[i] = rand() * 2 - 1;
     }
     if (AC.state === 'suspended') AC.resume();
   } catch (e) {}
