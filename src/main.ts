@@ -7,9 +7,11 @@ import './dev/replay';
 import { loadCharacterKits } from './entities/character/kit';
 import { initPlayer } from './entities/player';
 import { drawLives } from './hud/hud';
+import { initNative } from './native';
 import { setPower } from './systems/powers';
 import { tick } from './loop';
 
+initNative();
 loadCharacterKits().then(() => {
   initPlayer();
   buildWorld(1);

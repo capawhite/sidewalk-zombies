@@ -2,3 +2,12 @@ node_modules
 dist
 .DS_Store
 *.zip
+ios/App/Pods
+ios/App/build
+ios/DerivedData
+ios/App/App/public
+android/.gradle
+android/app/build
+android/build
+android/local.properties
+android/app/src/main/assets/public

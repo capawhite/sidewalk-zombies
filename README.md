@@ -1,8 +1,8 @@
-# Sidewalk Zombies — feel prototype
+# Sidewalk Zombies
 
-Third-person weave-and-dodge. Run the block, avoid oblivious phone-zombies, shove a path when cornered. This is a **throwaway feel test** — the goal is to confirm the dodge loop is fun before committing to a Unity build. Nothing here is meant to become production code.
+Third-person weave-and-dodge. Run the block, avoid oblivious phone-zombies, shove a path when cornered.
 
-## Run it
+## Run it (browser)
 
 ```bash
 npm install
@@ -11,33 +11,44 @@ npm run dev
 
 Open the URL Vite prints (usually http://localhost:5173).
 
+```bash
+npm run build      # typecheck + production bundle in dist/
+npm run preview    # serve that bundle
+```
+
+### Quality and overlay
+
+- `?quality=low|medium|high` picks a GPU tier and remembers it in `localStorage` (`sz_quality`). Phones are guessed: low if they report ≤4 GB RAM or ≤4 cores, otherwise medium. Desktops get high.
+- `?perf` or press **P** shows fps, worst frame, draw calls and GPU memory. On a phone, tap the top-left corner five times.
+
+## iOS and Android (Capacitor)
+
+The same `dist/` bundle runs in a native WebView.
+
+The `ios/` and `android/` projects are in the repo. Whenever the web build changes:
+
+```bash
+npm run ios        # typecheck, vite build, cap sync, open Xcode
+npm run android    # typecheck, vite build, cap sync, open Android Studio
+```
+
+Or `npm run cap:sync` to update the native projects without opening an IDE. If those folders are missing (a fresh checkout that dropped them), run `npx cap add ios` and `npx cap add android` once first.
+
+- **iOS:** Xcode 15+, a simulator or a signed device. Run from the `ios` workspace Capacitor opens.
+- **Android:** Android Studio, SDK 33+, a device or emulator. Run the `android` project.
+- Status bar overlays the WebView; the HUD already uses `env(safe-area-inset-*)`.
+- First launch still needs the network for the Google fonts; after that the game itself is in the app bundle (`public/models`, `public/env`).
+
 ## Controls
 
 - **A / D** or **← / →** — weave
 - **Space** — shove (trips everyone ahead; short recharge)
 - On a phone: **drag** to steer, tap **Shove**
 
-## What to judge
+## Awareness tiers
 
-One question only: does steering-and-dodging feel good *on its own*, before any art?
-
-If yes → the concept is de-risked and Unity is the next move.
-If it feels flat → tune it here (all the knobs are at the top of `src/main.ts`): `speed` ramp, the `steer * 11` steering rate, `spawnTimer` density, collision half-widths (`1.05` / `1.25`), `shoveMax` cooldown.
-
-## Layout
-
-- `index.html` — HUD + menu/game-over markup
-- `src/main.ts` — the whole game (scene, spawning, input, loop)
-- `src/style.css` — UI styling
-
-## Note on the earlier bug
-
-The first web build looked dead because the `<canvas>` was appended *last*, so it sat on top of the menu and ate every click. Fixed here two ways: the canvas is inserted as the first child of `#wrap`, and `z-index` puts the UI above it (`src/style.css`). If anything throws at runtime, it now prints to a red bar at the bottom of the page so you don't have to open devtools.
-
-## Awareness tiers (the core difficulty lever)
-
-- 🟢 **Chatting** — walks straight, predictable
-- 🟠 **Texting** — drifts sideways into your lane
+- 🟢 **Calling** — phone on the ear, wandering left and right
+- 🟠 **Texting** — head down, walking straight
 - 🔴 **Filming** — stopped dead, blocks the lane
 
 Spawns always leave at least one open slot, so every wall is passable.
@@ -49,3 +60,5 @@ The people are rigged glTF bodies by [Quaternius](https://quaternius.com) (CC0, 
 ## Environments
 
 Each scene paints its signs, products and shop fronts into one canvas atlas (`src/scene/art/`) so the textured scenery shares a single material and merges into a handful of instanced meshes (`src/scene/worlds/strip.ts`). The aisle, boardwalk, food court and beach are built from a few repeating modules; the playable lane is left calm and low-contrast.
+
+Feel knobs live in `src/config.ts`.

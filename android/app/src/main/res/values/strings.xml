@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sidewalk Zombies</string>
+    <string name="title_activity_main">Sidewalk Zombies</string>
+    <string name="package_name">com.sidewalkzombies.game</string>
+    <string name="custom_url_scheme">com.sidewalkzombies.game</string>
+</resources>
