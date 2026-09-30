@@ -59,6 +59,8 @@ export function buildWorld(lv: number) {
   if (strip) disposeStrip(strip);
   const variants = Array.from({ length: VARIANTS }, (_, v) => makeVariant(lv, v));
   strip = buildStrip(variants, (LOOKS[lv] ?? LOOKS[1]).fogFar);
+  // The variant groups only existed so we could steal their merged geometry; the InstancedMeshes own it now.
+  variants.forEach((v) => v.clear());
   scene.add(strip.group);
   G.worldLevel = lv;
   setTheme(lv);

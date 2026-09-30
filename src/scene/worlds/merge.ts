@@ -131,5 +131,7 @@ export function mergeStatic(segment: THREE.Group, options: MergeOptions = {}): T
     mesh.receiveShadow = b.receiveShadow;
     out.add(mesh);
   }
+  // The raw segment is never drawn; drop it so the per-mesh objects can be collected.
+  segment.clear();
   return out;
 }

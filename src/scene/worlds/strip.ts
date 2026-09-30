@@ -77,4 +77,5 @@ export function disposeStrip(strip: Strip) {
     mesh.geometry.dispose(); // materials and textures are shared and stay alive
     mesh.dispose();
   }
+  strip.layers.length = 0;
 }
