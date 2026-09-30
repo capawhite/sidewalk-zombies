@@ -1,7 +1,7 @@
 // Object pools for zombies, pickups, coins and bullets.
 import * as THREE from 'three';
 import { COL } from '../config';
-import { mat } from '../render/materials';
+import { glowColor, mat } from '../render/materials';
 import { scene } from '../render/renderer';
 import { makeInfluencer, makePerson } from './person';
 import { makeBatModel, makeHornModel } from './player';
@@ -56,8 +56,8 @@ export function getPickup(): any {
   g.active = false; g.visible = false; scene.add(g); pickPool.push(g); return g;
 }
 export const coinPool: any[] = [];
-const matCoin = new THREE.MeshBasicMaterial({ color: 0xf0c020 });
-const matCoinIn = new THREE.MeshBasicMaterial({ color: 0xfff0a0 });
+const matCoin = new THREE.MeshBasicMaterial({ color: glowColor(0xf0c020, 1.8) });
+const matCoinIn = new THREE.MeshBasicMaterial({ color: glowColor(0xfff0a0, 1.6) });
 function makeCoinMesh() {
   const g: any = new THREE.Group();
   const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.08, 14), matCoin);
@@ -75,7 +75,7 @@ export function getCoin(): any {
   g.active = false; g.visible = false; scene.add(g); coinPool.push(g); return g;
 }
 export const bullets: any[] = [];
-const matBullet = new THREE.MeshBasicMaterial({ color: 0xffee66 });
+const matBullet = new THREE.MeshBasicMaterial({ color: glowColor(0xffee66, 2.5) });
 const geoBullet = new THREE.SphereGeometry(0.09, 6, 6);
 export function getBullet(): any {
   for (const b of bullets) if (!b.active) return b;

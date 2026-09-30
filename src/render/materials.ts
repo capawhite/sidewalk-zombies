@@ -1,5 +1,6 @@
 // Material helpers shared by every scene.
 import * as THREE from 'three';
+import { QUALITY } from './quality';
 
 export interface PbrExtras {
   roughness?: number;
@@ -38,4 +39,12 @@ export function cmat(hex: number) {
 export function setEnvIntensity(value: number) {
   envIntensity = value;
   allPbr.forEach((m) => { m.envMapIntensity = value; });
+}
+
+// Colour for unlit "light-emitting" things (neon, lamps, coins). With bloom on, the colour is pushed above 1.0
+// so only these pass the bloom threshold; without bloom it stays a normal colour.
+export function glowColor(hex: number, boost: number): THREE.Color {
+  const c = new THREE.Color(hex);
+  if (QUALITY.bloom) c.multiplyScalar(boost);
+  return c;
 }
