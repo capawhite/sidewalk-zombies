@@ -1,7 +1,7 @@
 // Spawning of crowds, pickups and coins.
 import * as THREE from 'three';
 import { CLAMP_X, COIN_GAP, CROWD_RAMP_DIST, GUN_PACK_FILL, GUN_PACK_GAP, GUN_PACK_LANES, GUN_PACK_MORE, GUN_PACK_ROWS, GUN_PACK_ROW_Z, GUN_PACK_SQUEEZE, GUN_PACK_Z_JITTER, SPAWN_FILL_END, SPAWN_FILL_START, SPAWN_GAP, SPAWN_Z, TYPES } from '../config';
-import { applyPose } from '../entities/person';
+import { applyPose, setShirtColor } from '../entities/person';
 import { PICK_COL, getCoin, getPickup, getZombie } from '../entities/pools';
 import { G, slotsX, stageOf } from '../state';
 import { clamp, rand } from '../util';
@@ -73,7 +73,7 @@ function spawnZombie(x: number, type: string, zPos?: number) {
   z.userData.knockVx = 0; z.userData.knockVy = 0; z.userData.fx = '';
   z.position.set(x, 0, zPos ?? (SPAWN_Z + rand() * 3));
   z.rotation.set(0, 0, 0);
-  if (type !== 'inf') (z.userData.body.material as THREE.MeshStandardMaterial).color.setHex(def.color);
+  if (type !== 'inf') setShirtColor(z, def.color);
   applyPose(z, type);
 }
 export function spawnPickup() {

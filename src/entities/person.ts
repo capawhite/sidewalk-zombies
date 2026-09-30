@@ -1,277 +1,236 @@
-// Procedural low-poly people, poses and walk cycle.
+// People: one skinned mesh per character, animated with an AnimationMixer.
+//
+// The bodies and baked poses come from ./character/kit.ts. Here a character is a Group holding a cloned rig and its
+// mixer. Blob shadows and phones are drawn by ./crowdProps.ts. Gameplay code only uses the functions exported below.
 import * as THREE from 'three';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BIKINIS, COL, HAIR, LONG_HAIR, PANTS, SKINS } from '../config';
 import { mat } from '../render/materials';
-import { rand } from '../util';
+import { clamp, rand } from '../util';
+import { characterMaterial, kits, type BodyName, type GripName, type Kit, type PoseName, type Region } from './character/kit';
 
-// ---------- people (low-poly adult, shared geos) ----------
-const GEO = {
-  hip: new THREE.BoxGeometry(0.38, 0.16, 0.22),
-  torso: new THREE.BoxGeometry(0.42, 0.52, 0.25),
-  thigh: new THREE.CylinderGeometry(0.075, 0.09, 0.44, 8),
-  calf: new THREE.CylinderGeometry(0.062, 0.075, 0.4, 8),
-  shoe: new THREE.BoxGeometry(0.13, 0.08, 0.26),
-  uarm: new THREE.CylinderGeometry(0.05, 0.058, 0.3, 7),
-  larm: new THREE.CylinderGeometry(0.042, 0.05, 0.28, 7),
-  hand: new THREE.SphereGeometry(0.05, 7, 6),
-  neck: new THREE.CylinderGeometry(0.065, 0.075, 0.11, 7),
-  head: new THREE.SphereGeometry(0.19, 12, 10),
-  hair: new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.58),
-  eye: new THREE.SphereGeometry(0.026, 6, 5),
-  phone: new THREE.BoxGeometry(0.09, 0.17, 0.018),
-  blob: new THREE.CircleGeometry(0.3, 12),
-};
-const matEye = mat(0x1c1410);
-const matBlob = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2 });
-const matPhone = new THREE.MeshBasicMaterial({ color: COL.phone });
-function limb(geo: THREE.BufferGeometry, color: number, y: number) {
-  const m = new THREE.Mesh(geo, mat(color));
-  m.position.y = y; m.castShadow = true;
-  return m;
+const billGeometry = new THREE.BoxGeometry(0.17, 0.02, 0.13);
+
+const CAP_COLOR = 0xd8362b;
+const RUN_SPEED = 1.7;   // player run cycle playback rate (the clip is 0.88 s long)
+const WALK_SPEED = 1.3;  // crowd walk cycle playback rate (the clip is 1.04 s long)
+
+// Everything a character needs after it is built. Lives in group.userData.rig.
+interface Rig {
+  kit: Kit;
+  root: THREE.Object3D;
+  mixer: THREE.AnimationMixer;
+  colors: THREE.BufferAttribute;
+  head: THREE.Object3D;
+  palm: THREE.Object3D;                 // right palm bone
+  phoneHolder: THREE.Object3D;          // what the phone is positioned relative to (the palm; the group for a tripod camera)
+  phoneAt: THREE.Matrix4 | null;        // phone relative to phoneHolder, null when the pose has no phone
+  sway: [number, number, number]; // extra head [pitch, yaw, roll] on top of the animation
+  run: THREE.AnimationAction | null;
+  walk: THREE.AnimationAction | null;
+  idle: THREE.AnimationAction | null;
+  pose: THREE.AnimationAction | null;
 }
-export function makePerson(shirtColor: number, isPlayer: boolean): any {
-  const g: any = new THREE.Group();
-  const skin = isPlayer ? COL.playerSkin : SKINS[(rand() * SKINS.length) | 0];
-  const pants = isPlayer ? COL.playerPants : PANTS[(rand() * PANTS.length) | 0];
-  const hairC = isPlayer ? shirtColor : HAIR[(rand() * HAIR.length) | 0];
 
-  const blob = new THREE.Mesh(GEO.blob, matBlob);
-  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; g.add(blob);
+// ---------- colouring ----------
+const tmpColor = new THREE.Color();
+function paint(rig: Rig, region: Region, hex: number) {
+  tmpColor.setHex(hex);
+  const data = rig.colors.array as Float32Array;
+  for (const v of rig.kit.regionVerts[region]) { data[v * 3] = tmpColor.r; data[v * 3 + 1] = tmpColor.g; data[v * 3 + 2] = tmpColor.b; }
+  rig.colors.needsUpdate = true;
+}
+export function setShirtColor(z: any, hex: number) {
+  paint(z.userData.rig, 'shirt', hex);
+}
 
-  function makeLeg(side: number) {
-    const root = new THREE.Group();
-    root.position.set(side * 0.11, 0.94, 0);
-    root.add(limb(GEO.thigh, pants, -0.22));
-    root.add(limb(GEO.calf, pants, -0.62));
-    const shoe = new THREE.Mesh(GEO.shoe, mat(0x1a1a1a));
-    shoe.position.set(0, -0.84, 0.04); shoe.castShadow = true; root.add(shoe);
-    return root;
-  }
-  const lLeg = makeLeg(-1), rLeg = makeLeg(1);
-  g.add(lLeg); g.add(rLeg);
+// ---------- building ----------
+interface Look { skin: number; shirt: number; pants: number; hair: number; shoes?: number }
 
-  const hips = new THREE.Mesh(GEO.hip, mat(pants));
-  hips.position.y = 0.94; hips.castShadow = true; g.add(hips);
+function addBody(g: THREE.Group, name: BodyName, look: Look, facing: number): Rig {
+  const kit = kits[name];
+  if (!kit) throw new Error('Character models are not loaded yet');
+  const root = cloneSkinned(kit.scene) as THREE.Group;
+  root.scale.setScalar(kit.scale);
+  root.rotation.y = facing;
+  let mesh!: THREE.SkinnedMesh;
+  root.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) mesh = o as THREE.SkinnedMesh; });
 
-  const upper = new THREE.Group();
-  upper.position.y = 0.94;
-  g.add(upper);
+  // Characters share the merged geometry's buffers and only own their colour attribute.
+  const geometry = new THREE.BufferGeometry();
+  geometry.index = kit.geometry.index;
+  for (const attr of ['position', 'normal', 'skinIndex', 'skinWeight']) geometry.setAttribute(attr, kit.geometry.getAttribute(attr));
+  const colors = new THREE.BufferAttribute(new Float32Array(kit.geometry.getAttribute('position').count * 3), 3);
+  colors.setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute('color', colors);
+  mesh.geometry = geometry;
+  mesh.material = characterMaterial;
+  mesh.castShadow = true;
+  mesh.frustumCulled = false; // the bind-pose bounds do not follow the animation
+  g.add(root);
 
-  const torso = new THREE.Mesh(GEO.torso, mat(shirtColor));
-  torso.position.y = 0.36; torso.castShadow = true; upper.add(torso);
-
-  function makeArm(side: number) {
-    const root = new THREE.Group();
-    root.position.set(side * 0.26, 0.56, 0);
-    root.add(limb(GEO.uarm, shirtColor, -0.16));
-    const low = new THREE.Group();
-    low.position.y = -0.32;
-    low.add(limb(GEO.larm, skin, -0.12));
-    const hand = new THREE.Mesh(GEO.hand, mat(skin));
-    hand.position.y = -0.28; low.add(hand);
-    root.add(low);
-    root.userData.low = low; root.userData.hand = hand;
-    return root;
-  }
-  const lArm = makeArm(-1), rArm = makeArm(1);
-  upper.add(lArm); upper.add(rArm);
-
-  const neck = new THREE.Mesh(GEO.neck, mat(skin));
-  neck.position.y = 0.68; upper.add(neck);
-
-  const head = new THREE.Group();
-  head.position.y = 0.88;
-  const skull = new THREE.Mesh(GEO.head, mat(skin));
-  skull.scale.set(1, 1.12, 0.96); skull.castShadow = true; head.add(skull);
-  const hair = new THREE.Mesh(GEO.hair, mat(hairC));
-  hair.position.y = 0.04; head.add(hair);
-  [-1, 1].forEach((s) => {
-    const eye = new THREE.Mesh(GEO.eye, matEye);
-    eye.position.set(s * 0.065, 0.02, 0.155); head.add(eye);
-  });
-  upper.add(head);
-
-  if (!isPlayer) {
-    const phone = new THREE.Mesh(GEO.phone, matPhone);
-    rArm.userData.hand.add(phone);
-    phone.position.set(0, 0, 0.07);
-    g.userData.phone = phone;
-  } else {
-    hair.material = mat(shirtColor);
-    const bill = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.16), mat(shirtColor));
-    bill.position.set(0, 0.08, 0.12); head.add(bill);
-  }
-
-  g.userData.head = head;
-  g.userData.body = torso;
-  g.userData.upper = upper;
-  g.userData.lLeg = lLeg; g.userData.rLeg = rLeg;
-  g.userData.lArm = lArm; g.userData.rArm = rArm;
+  const rig: Rig = {
+    kit, root, mixer: new THREE.AnimationMixer(root), colors, head: root.getObjectByName('Head')!, palm: root.getObjectByName('PalmR')!, phoneHolder: g, phoneAt: null,
+    sway: [0, 0, 0], run: null, walk: null, idle: null, pose: null,
+  };
+  paint(rig, 'skin', look.skin);
+  paint(rig, 'shirt', look.shirt);
+  paint(rig, 'pants', look.pants);
+  paint(rig, 'hair', look.hair);
+  paint(rig, 'shoes', look.shoes ?? 0x1a1a1a);
+  paint(rig, 'socks', 0xe6e2da);
+  paint(rig, 'eyes', 0x1c1410);
+  g.userData.rig = rig;
+  g.userData.head = rig.head;
+  g.userData.phone = { visible: true }; // gameplay clears this when the character is knocked
   g.userData.inf = false;
+  return rig;
+}
+
+function mount(object: THREE.Object3D, parent: THREE.Object3D, at: { position: THREE.Vector3; quaternion: THREE.Quaternion }, kit: Kit) {
+  object.scale.setScalar(kit.propScale);
+  object.position.copy(at.position);
+  object.quaternion.copy(at.quaternion);
+  parent.add(object);
+}
+
+// Put one of the player's props (bat, horn, gun) into the right hand; it then follows the arm. `size` scales the prop.
+export function holdInRightHand(player: any, prop: THREE.Object3D, grip: GripName, size = 1) {
+  const rig: Rig = player.userData.rig;
+  mount(prop, rig.root.getObjectByName('PalmR')!, rig.kit.grips[grip], rig.kit);
+  prop.scale.multiplyScalar(size);
+}
+
+// Crowd bodies rotate through this list (no randomness, so the seeded game stream is unaffected).
+const CROWD_BODIES: BodyName[] = ['man', 'woman', 'man', 'tank', 'woman', 'dress'];
+let crowdMade = 0;
+
+// `into` lets the player module hand in its (already exported) group once the models have loaded.
+export function makePerson(shirtColor: number, isPlayer: boolean, into?: THREE.Group): any {
+  const g: any = into ?? new THREE.Group();
+  const look: Look = isPlayer
+    ? { skin: COL.playerSkin, shirt: shirtColor, pants: COL.playerPants, hair: CAP_COLOR }
+    : { skin: SKINS[(rand() * SKINS.length) | 0], shirt: shirtColor, pants: PANTS[(rand() * PANTS.length) | 0], hair: HAIR[(rand() * HAIR.length) | 0] };
+  if (isPlayer) {
+    // The runner faces away from the camera.
+    const rig = addBody(g, 'man', look, Math.PI);
+    const bill = new THREE.Mesh(billGeometry, mat(CAP_COLOR));
+    mount(bill, rig.head, rig.kit.bill, rig.kit);
+    rig.run = rig.mixer.clipAction(rig.kit.clips.run).play();
+    rig.run.timeScale = RUN_SPEED;
+    rig.mixer.update(0);
+  } else {
+    const rig = addBody(g, CROWD_BODIES[crowdMade++ % CROWD_BODIES.length], look, 0);
+    rig.phoneHolder = rig.palm;
+  }
   return g;
 }
+
 export function makeInfluencer(): any {
   const g: any = new THREE.Group();
   const female = rand() < 0.86;
   const skin = SKINS[(rand() * SKINS.length) | 0];
   const kit = BIKINIS[(rand() * BIKINIS.length) | 0];
   const hairC = LONG_HAIR[(rand() * LONG_HAIR.length) | 0];
+  addBody(g, female ? 'dress' : 'man', {
+    skin, shirt: kit, pants: female ? kit : 0xe8dcc4, hair: hairC, shoes: female ? 0xf2d4a8 : 0x1a1a1a,
+  }, 0);
 
-  const blob = new THREE.Mesh(GEO.blob, matBlob);
-  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; g.add(blob);
-
-  function makeLeg(side: number) {
-    const root = new THREE.Group();
-    root.position.set(side * (female ? 0.13 : 0.11), 0.94, 0);
-    root.add(limb(GEO.thigh, skin, -0.22));
-    root.add(limb(GEO.calf, skin, -0.62));
-    const shoe = new THREE.Mesh(GEO.shoe, mat(female ? 0xf2d4a8 : 0x1a1a1a));
-    shoe.position.set(0, -0.84, 0.05); shoe.scale.set(0.9, 0.7, 1.05); shoe.castShadow = true; root.add(shoe);
-    return root;
-  }
-  const lLeg = makeLeg(-1), rLeg = makeLeg(1);
-  g.add(lLeg); g.add(rLeg);
-
-  const hips = new THREE.Mesh(new THREE.BoxGeometry(female ? 0.46 : 0.38, 0.16, 0.24), mat(skin));
-  hips.position.y = 0.94; hips.castShadow = true; g.add(hips);
-  const bottom = new THREE.Mesh(new THREE.BoxGeometry(female ? 0.44 : 0.36, 0.12, 0.22), mat(kit));
-  bottom.position.y = 0.93; g.add(bottom);
-
-  const upper = new THREE.Group();
-  upper.position.y = 0.94;
-  g.add(upper);
-
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(female ? 0.34 : 0.4, 0.48, 0.2), mat(skin));
-  torso.position.y = 0.36; torso.castShadow = true; upper.add(torso);
-  if (female) {
-    [-1, 1].forEach((s) => {
-      const cup = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), mat(kit));
-      cup.scale.set(1.05, 0.85, 0.9);
-      cup.position.set(s * 0.1, 0.48, 0.08); cup.castShadow = true; upper.add(cup);
-    });
-    const strap = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.04), mat(kit));
-    strap.position.set(0, 0.58, 0.02); upper.add(strap);
-  } else {
-    const tank = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.3, 0.22), mat(kit));
-    tank.position.y = 0.42; upper.add(tank);
-  }
-
-  function makeArm(side: number) {
-    const root = new THREE.Group();
-    root.position.set(side * (female ? 0.24 : 0.26), 0.56, 0);
-    root.add(limb(GEO.uarm, skin, -0.16));
-    const low = new THREE.Group();
-    low.position.y = -0.32;
-    low.add(limb(GEO.larm, skin, -0.12));
-    const hand = new THREE.Mesh(GEO.hand, mat(skin));
-    hand.position.y = -0.28; low.add(hand);
-    root.add(low);
-    root.userData.low = low; root.userData.hand = hand;
-    return root;
-  }
-  const lArm = makeArm(-1), rArm = makeArm(1);
-  upper.add(lArm); upper.add(rArm);
-
-  const neck = new THREE.Mesh(GEO.neck, mat(skin));
-  neck.position.y = 0.68; upper.add(neck);
-
-  const head = new THREE.Group();
-  head.position.y = 0.88;
-  const skull = new THREE.Mesh(GEO.head, mat(skin));
-  skull.scale.set(female ? 0.96 : 1, 1.12, 0.96); skull.castShadow = true; head.add(skull);
-  const hair = new THREE.Mesh(GEO.hair, mat(hairC));
-  hair.position.y = 0.05; hair.scale.set(1.08, 1.05, 1.08); head.add(hair);
-  if (female) {
-    const fall = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat(hairC));
-    fall.scale.set(0.85, 1.35, 0.7);
-    fall.position.set(0, -0.12, -0.1); head.add(fall);
-  }
-  [-1, 1].forEach((s) => {
-    const eye = new THREE.Mesh(GEO.eye, matEye);
-    eye.position.set(s * 0.065, 0.02, 0.155); head.add(eye);
-  });
-  const shades = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.06), mat(0x1a1a1a));
-  shades.position.set(0, 0.04, 0.16); head.add(shades);
-  upper.add(head);
-
-  const tri = new THREE.Group();
-  const matBlack = mat(0x222226);
-  const matSilver = mat(0x9aa3ab);
-  [-1, 0, 1].forEach((s) => {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.02, 1.05, 5), matBlack);
-    leg.position.set(s * 0.14, 0.52, 0.55 + Math.abs(s) * 0.04);
-    leg.rotation.z = s * 0.28;
-    leg.rotation.x = 0.18;
-    tri.add(leg);
-  });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 6), matSilver);
-  pole.position.set(0, 1.22, 0.58); tri.add(pole);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 6, 14), mat(0xf4f0e6));
-  ring.position.set(0, 1.46, 0.5); tri.add(ring);
-  const cam = new THREE.Mesh(GEO.phone, matPhone);
-  cam.position.set(0, 1.46, 0.48);
-  cam.rotation.x = 0.35;
-  tri.add(cam);
-  g.add(tri);
-
-  g.userData.head = head;
-  g.userData.body = torso;
-  g.userData.upper = upper;
-  g.userData.lLeg = lLeg; g.userData.rLeg = rLeg;
-  g.userData.lArm = lArm; g.userData.rArm = rArm;
-  g.userData.phone = cam;
+  // Tripod with a ring light, standing in front of the influencer. Its camera is drawn as the influencer's "phone".
+  const tripod = new THREE.Mesh(tripodGeometry(), characterMaterial);
+  tripod.castShadow = true;
+  g.add(tripod);
   g.userData.inf = true;
   g.userData.female = female;
   return g;
 }
+
+let tripodGeo: THREE.BufferGeometry | null = null;
+function tripodGeometry() {
+  if (tripodGeo) return tripodGeo;
+  const parts: THREE.BufferGeometry[] = [];
+  const part = (geo: THREE.BufferGeometry, color: number, x: number, y: number, z: number, rx = 0, rz = 0) => {
+    geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, 0, rz)), new THREE.Vector3(1, 1, 1)));
+    const c = new THREE.Color(color), n = geo.getAttribute('position').count, rgb = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { rgb[i * 3] = c.r; rgb[i * 3 + 1] = c.g; rgb[i * 3 + 2] = c.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+    parts.push(geo);
+  };
+  [-1, 0, 1].forEach((s) => {
+    part(new THREE.CylinderGeometry(0.014, 0.02, 1.05, 5), 0x222226, s * 0.14, 0.52, 0.55 + Math.abs(s) * 0.04, 0.18, s * 0.28);
+  });
+  part(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 6), 0x9aa3ab, 0, 1.22, 0.58);
+  part(new THREE.TorusGeometry(0.16, 0.018, 6, 14), 0xf4f0e6, 0, 1.46, 0.5);
+  // mergeGeometries needs every part to have the same attributes and indexing
+  tripodGeo = mergeGeometries(parts.map((g) => g.toNonIndexed().deleteAttribute('uv')))!;
+  return tripodGeo;
+}
+
+// The influencer's phone is the camera on the tripod.
+const tripodCamera = new THREE.Matrix4().compose(
+  new THREE.Vector3(0, 1.46, 0.48), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.35, 0, 0)), new THREE.Vector3(1, 1, 1),
+);
+
+// ---------- poses and animation ----------
+// Switch a pooled character to the pose for `type` ('talk' | 'text' | 'selfie' | 'inf' | 'scared').
 export function applyPose(z: any, type: string) {
   const d = z.userData;
-  const rLow = d.rArm.userData.low, lLow = d.lArm.userData.low;
-  if (d.upper) d.upper.rotation.set(0, 0, 0);
-  d.lArm.rotation.set(0, 0, 0.12);
-  d.rArm.rotation.set(0, 0, -0.12);
-  if (rLow) rLow.rotation.set(0, 0, 0);
-  if (lLow) lLow.rotation.set(0, 0, 0);
-  d.head.rotation.set(0, 0, 0);
-  if (d.phone && type !== 'inf') { d.phone.visible = true; d.phone.position.set(0, 0, 0.07); d.phone.rotation.set(0, 0, 0); }
-  if (type === 'inf') {
-    if (d.upper) d.upper.rotation.set(0, 0.08, 0.06);
-    d.head.rotation.set(-0.12, 0, 0);
-    d.rArm.rotation.set(-0.35, 0.15, -1.15);
-    if (rLow) rLow.rotation.set(-0.4, 0, 0);
-    d.lArm.rotation.set(-1.55, -0.2, 0.35);
-    if (lLow) lLow.rotation.set(-0.5, 0, 0);
-    if (d.phone) { d.phone.visible = true; d.phone.rotation.set(0.35, 0, 0); }
-  } else if (type === 'talk') {
-    if (d.upper) d.upper.rotation.x = 0;
-    d.head.rotation.set(0.02, 0.06, 0.12);
-    d.rArm.rotation.set(-2.15, 0.5, -0.85);
-    if (rLow) rLow.rotation.set(-1.45, 0, 0);
-    d.lArm.rotation.set(0.15, 0, 0.22);
-    if (d.phone) { d.phone.position.set(0.05, 0.05, 0.02); d.phone.rotation.set(0.5, 1.15, 1.35); }
-  } else if (type === 'text') {
-    if (d.upper) d.upper.rotation.x = 0;
-    d.head.rotation.set(-0.78, 0.05, 0);
-    d.rArm.rotation.set(-1.05, 0.22, -0.32);
-    if (rLow) rLow.rotation.set(-1.2, 0, 0.12);
-    d.lArm.rotation.set(-0.98, -0.18, 0.38);
-    if (lLow) lLow.rotation.set(-1.1, 0, -0.08);
-    if (d.phone) { d.phone.position.set(0.02, -0.02, 0.08); d.phone.rotation.set(-0.45, 0.18, 0.12); }
-  } else {
-    if (d.upper) d.upper.rotation.x = -0.08;
-    d.head.rotation.set(0.12, 0, 0);
-    d.rArm.rotation.set(-2.45, 0.08, -0.12);
-    if (rLow) rLow.rotation.set(-0.2, 0, 0);
-    if (d.phone) { d.phone.position.set(0, 0.02, 0.08); d.phone.rotation.set(0.15, 0, 0); }
-  }
+  const rig: Rig = d.rig;
+  const name: PoseName = type === 'selfie' ? 'film' : (type as PoseName);
+  const clips = rig.kit.poses[name];
+  rig.mixer.stopAllAction();
+  rig.pose = rig.mixer.clipAction(clips.pose).play();
+  rig.walk = rig.mixer.clipAction(clips.walk).play();
+  rig.idle = rig.mixer.clipAction(clips.idle).play();
+  // Start each character at its own point of the walk cycle so a row of them does not march in step.
+  const phase = ((d.driftPhase ?? 0) / 6.28) % 1;
+  rig.walk.time = phase * clips.walk.duration;
+  rig.idle.time = phase * clips.idle.duration;
+  rig.sway = [0, 0, 0];
+  if (d.inf) rig.phoneAt = tripodCamera;
+  else if (clips.phone) {
+    rig.phoneAt = (rig.phoneAt ?? new THREE.Matrix4()).compose(clips.phone.position, clips.phone.quaternion, tmpScale.setScalar(rig.kit.propScale));
+  } else rig.phoneAt = null;
+  d.phone.visible = true;
+  rig.mixer.update(0);
 }
-export function gait(z: any, t: number, amt: number) {
-  const d = z.userData;
-  if (!d.lLeg) return;
-  const sw = Math.sin(t) * amt;
-  d.lLeg.rotation.x = sw;
-  d.rLeg.rotation.x = -sw;
-  if (d.knocked || d.type === 'text' || d.type === 'selfie' || d.type === 'talk' || d.type === 'inf') return;
-  d.lArm.rotation.x = -sw * 0.7;
-  d.rArm.rotation.x = sw * 0.7;
+
+// World matrix for this character's phone, or false if it has none right now (used by crowdProps).
+const tmpScale = new THREE.Vector3();
+export function phoneMatrix(z: any, out: THREE.Matrix4): boolean {
+  const rig: Rig = z.userData.rig;
+  if (!rig.phoneAt) return false;
+  rig.phoneHolder.updateWorldMatrix(true, false);
+  out.multiplyMatrices(rig.phoneHolder.matrixWorld, rig.phoneAt);
+  return true;
+}
+
+// Extra head rotation (radians, about world axes) added on top of the animation, e.g. a sway while talking.
+export function setHeadSway(z: any, pitch: number, yaw: number, roll: number) {
+  const s = z.userData.rig.sway;
+  s[0] = pitch; s[1] = yaw; s[2] = roll;
+}
+
+const swayWorld = new THREE.Quaternion(), swayParent = new THREE.Quaternion(), swayEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+function applySway(rig: Rig) {
+  const [pitch, yaw, roll] = rig.sway;
+  if (pitch === 0 && yaw === 0 && roll === 0) return;
+  swayWorld.setFromEuler(swayEuler.set(pitch, yaw, roll));
+  swayParent.copy(rig.kit.neckWorld);
+  // world rotation R applied on top of the head: local' = P^-1 * R * P * local
+  rig.head.quaternion.premultiply(swayWorld.premultiply(swayParent.clone().invert()).multiply(swayParent));
+}
+
+// Advance a character's animation. `amt` is how much it walks: about 0.05 = standing, 0.5 = brisk walk.
+// The player (run cycle only) ignores it.
+export function animatePerson(z: any, dt: number, amt: number) {
+  const rig: Rig = z.userData.rig;
+  if (rig.run) { rig.mixer.update(dt); return; }
+  const w = clamp(amt * 2.6, 0, 1);
+  rig.walk!.setEffectiveWeight(w);
+  rig.idle!.setEffectiveWeight(1 - w);
+  rig.walk!.timeScale = WALK_SPEED;
+  rig.mixer.update(dt);
+  applySway(rig);
 }

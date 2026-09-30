@@ -1,11 +1,13 @@
 // Deterministic replay harness (open the game with ?replay).
+import * as THREE from 'three';
 import { LIVES_MAX } from '../config';
+import { loadCharacterKits } from '../entities/character/kit';
 import { player } from '../entities/player';
-import { bullets, coinPool, pickPool, pool } from '../entities/pools';
+import { applyPose, animatePerson, setShirtColor } from '../entities/person';
+import { bullets, coinPool, getZombie, pickPool, pool } from '../entities/pools';
 import { drawLives } from '../hud/hud';
-import { frame } from '../loop';
+import { draw, frame } from '../loop';
 import { parts } from '../render/fx';
-import { renderFrame } from '../render/post';
 import { setSkyColor } from '../render/sky';
 import { camera, renderer, scene } from '../render/renderer';
 import { LOOKS } from '../scene/looks';
@@ -60,7 +62,9 @@ function runReplay(seed: number, frames: number) {
   return { hash: h, calls, count: lines.length, lines };
 }
 if (new URLSearchParams(location.search).has('replay')) {
+  // Resolves once the character models are loaded and the player exists; wait for it before calling run().
+  (window as any).__ready = loadCharacterKits().then(() => new Promise((r) => setTimeout(r, 0)));
   (window as any).__replay = { run: runReplay };
   // Handles for console profiling (e.g. draw calls per world).
-  (window as any).__dbg = { renderer, scene, camera, buildWorld, frame, start, renderFrame, LOOKS, setSkyColor };
+  (window as any).__dbg = { THREE, renderer, scene, camera, buildWorld, frame, start, renderFrame: draw, LOOKS, setSkyColor, player, pool, getZombie, applyPose, animatePerson, setShirtColor };
 }

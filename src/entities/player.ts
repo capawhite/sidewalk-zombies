@@ -3,11 +3,18 @@ import * as THREE from 'three';
 import { COL } from '../config';
 import { mat } from '../render/materials';
 import { scene } from '../render/renderer';
-import { makePerson } from './person';
+import { holdInRightHand, makePerson } from './person';
 
-export const player: any = makePerson(COL.player, true);
+// The group exists from the start (other modules import it); the body is added by initPlayer() once the models have loaded.
+export const player: any = new THREE.Group();
 player.position.set(0, 0, 6.5);
 scene.add(player);
+export function initPlayer() {
+  makePerson(COL.player, true, player);
+  holdInRightHand(player, batProp, 'bat');
+  holdInRightHand(player, hornProp, 'horn', 0.55);
+  holdInRightHand(player, gunProp, 'gun');
+}
 export function makeBatModel() {
   const g = new THREE.Group();
   const metal = mat(0xd8e2ea);
@@ -44,27 +51,21 @@ export function makeHornModel() {
   [bulb, neck, bell, lip].forEach((m) => { m.castShadow = true; });
   return g;
 }
+// The props are parented to the runner's right hand by initPlayer(); see holdInRightHand().
 export const batProp = makeBatModel();
-batProp.position.set(0.36, 0.7, 0.18);
-batProp.rotation.set(-0.95, 0.2, -0.55);
-player.add(batProp);
 batProp.visible = false;
 export const hornProp = makeHornModel();
-hornProp.scale.setScalar(0.55);
-hornProp.position.set(0.32, 1.28, 0.28);
-hornProp.rotation.set(0.15, -0.4, 0.35);
-player.add(hornProp);
 hornProp.visible = false;
 export const gunProp = new THREE.Group();
 {
+  // Modelled around the grip, pointing down -z.
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.42), mat(0x2c2c2c));
-  body.position.set(0.22, 1.2, 0.35); gunProp.add(body);
+  body.position.set(0, 0.16, -0.07); gunProp.add(body);
   const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.38), mat(0x555555));
-  barrel.position.set(0.22, 1.22, 0.05); gunProp.add(barrel);
+  barrel.position.set(0, 0.18, -0.37); gunProp.add(barrel);
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.22, 0.12), mat(0x1a1a1a));
-  grip.position.set(0.22, 1.04, 0.42); gunProp.add(grip);
+  gunProp.add(grip);
 }
-player.add(gunProp);
 gunProp.visible = false;
 export const scareRing = new THREE.Mesh(
   new THREE.RingGeometry(0.25, 0.5, 28),

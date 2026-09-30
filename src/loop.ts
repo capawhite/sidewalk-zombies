@@ -1,4 +1,5 @@
 // Game loop: one simulation step (frame) plus rendering (tick).
+import { syncCrowdProps } from './entities/crowdProps';
 import { elScore } from './hud/hud';
 import { updatePerf } from './hud/perf';
 import { renderFrame } from './render/post';
@@ -24,8 +25,14 @@ export function tick(now: number) {
   if (dt < 0) dt = 0;
   if (dt > 0.05) dt = 0.05;
   frame(dt, now);
-  renderFrame(dt);
+  draw(dt);
   updatePerf(dt);
+}
+
+// Draw the current state (the replay harness and dev tools call this too).
+export function draw(dt: number) {
+  syncCrowdProps();
+  renderFrame(dt);
 }
 
 // One simulation step: everything except drawing. The replay harness calls this directly.

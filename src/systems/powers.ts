@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { audioResume } from '../audio/engine';
 import { playPower, sfxGun } from '../audio/sfx';
 import { CART_LAUNCH, GUN_DURATION, GUN_STACK_MAX, GUN_START_INVULN, POWERS } from '../config';
+import { applyPose } from '../entities/person';
 import { batProp, gunProp, hornProp, player, scareRing } from '../entities/player';
 import { PICK_COL, getBullet, pool } from '../entities/pools';
 import { drawArsenal, elShove, elShoveHint, elShoveName, flash } from '../hud/hud';
@@ -69,8 +70,7 @@ export function knockOff(z: any, dx: number, fx: string) {
   } else if (fx === 'horn') {
     d.knockVx = dir * (13 + rand() * 4);
     d.knockVy = 2;
-    d.lArm.rotation.set(-2.5, 0, 0.3);
-    d.rArm.rotation.set(-2.5, 0, -0.3);
+    applyPose(z, 'scared');
   } else if (fx === 'gun') {
     d.knockVx = dir * (3 + rand() * 2);
     d.knockVy = 6;

@@ -1,7 +1,7 @@
 // Zombie movement, knock-back physics, collisions and near-miss scoring.
 import { sfxBump, sfxNear } from '../audio/sfx';
 import { CART_GRAVITY, CLAMP_X, INF_DRIFT, INF_DRIFT_RATE, TALK_DRIFT, TALK_DRIFT_RATE } from '../config';
-import { gait } from '../entities/person';
+import { animatePerson, setHeadSway } from '../entities/person';
 import { player } from '../entities/player';
 import { pool } from '../entities/pools';
 import { drawLives, flash } from '../hud/hud';
@@ -48,13 +48,13 @@ export function updateZombies(dt: number, now: number) {
       z.position.x = d.baseX + Math.sin(d.driftPhase) * amp;
       z.position.x = clamp(z.position.x, -CLAMP_X, CLAMP_X);
       z.rotation.y = Math.sin(d.driftPhase) * (d.type === 'inf' ? 0.35 : 0.45);
-      if (d.type === 'talk') d.head.rotation.set(0.02, 0.06, 0.1 + Math.sin(now * 0.008) * 0.04);
-      else d.head.rotation.set(-0.12, Math.sin(d.driftPhase) * 0.08, 0);
+      if (d.type === 'talk') setHeadSway(z, 0, 0, Math.sin(now * 0.008) * 0.04);
+      else setHeadSway(z, 0, Math.sin(d.driftPhase) * 0.08, 0);
     } else if (d.type === 'text' || d.type === 'talk' || d.type === 'inf') {
       z.position.x = d.baseX;
       z.rotation.y = 0;
     }
-    gait(z, now * 0.008 + d.driftPhase, d.type === 'selfie' ? 0.05 : d.type === 'text' ? 0.5 : d.type === 'inf' ? 0.28 : 0.35);
+    animatePerson(z, dt, d.type === 'selfie' ? 0.05 : d.type === 'text' ? 0.5 : d.type === 'inf' ? 0.28 : 0.35);
 
     const dz = z.position.z - pz, dx = z.position.x - px;
     if (G.cartRush > 0 && Math.abs(dz) < 1.2 && Math.abs(dx) < 1.7) {

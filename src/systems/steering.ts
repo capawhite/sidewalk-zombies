@@ -1,6 +1,6 @@
 // Player steering, lean, hop and gait (play state only).
 import { CLAMP_X, STEER_ACCEL, STEER_DECEL, STEER_LEAN, STEER_LEAN_SMOOTH, STEER_MAX_SPEED, STEER_REVERSE, STEER_TOUCH_DEAD_PX, STEER_TOUCH_FOLLOW, STEER_TOUCH_SPAN, STEER_YAW } from '../config';
-import { gait } from '../entities/person';
+import { animatePerson } from '../entities/person';
 import { batProp, hornProp, player } from '../entities/player';
 import { wrap } from '../render/renderer';
 import { G, keys } from '../state';
@@ -41,7 +41,7 @@ export function updatePlayer(dt: number, now: number) {
     player.position.y = Math.sin(u * Math.PI) * 0.28;
     if (G.hopT <= 0) { G.hopT = 0; player.position.y = 0; }
   } else player.position.y = 0;
-  gait(player, now * 0.014, 0.55);
+  animatePerson(player, dt, 0.55);
   batProp.visible = G.power === 'cart' || G.cartRush > 0;
   hornProp.visible = G.power === 'horn' || G.scareT > 0;
 }
