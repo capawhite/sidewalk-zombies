@@ -2,8 +2,7 @@
 import { GUN_FRONT, GUN_HIT_X, GUN_HIT_Z, GUN_SPEED, SPAWN_Z } from '../config';
 import { player } from '../entities/player';
 import { bullets, pool } from '../entities/pools';
-import { G } from '../state';
-import { knockOff, score } from './powers';
+import { knockOff, registerBonk } from './powers';
 
 export function updateBullets(dt: number) {
   const pz = player.position.z;
@@ -16,7 +15,7 @@ export function updateBullets(dt: number) {
       if (z.position.z > player.position.z - GUN_FRONT) continue;
       if (Math.abs(z.position.x - b.position.x) < GUN_HIT_X && Math.abs(z.position.z - b.position.z) < GUN_HIT_Z) {
         knockOff(z, z.position.x - b.position.x, 'gun');
-        G.combo++; G.bestCombo = Math.max(G.bestCombo, G.combo); score(8);
+        registerBonk(1, 8, undefined, '#ff8a2a');
         b.active = false; b.visible = false;
         break;
       }

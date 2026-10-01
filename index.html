@@ -18,10 +18,19 @@
       <div class="top">
         <div class="top-left">
           <div class="stat"><div class="k">Metres</div><div class="v" id="score">0</div></div>
+          <div class="stat chaos"><div class="k">Chaos</div><div class="v" id="chaos">0</div></div>
           <div class="stat gold"><div class="k">Coins</div><div class="v" id="coins">0</div></div>
         </div>
-        <div class="stat" style="text-align:right"><div class="k">Composure · <span id="level">Lv 1</span></div><div id="lives"></div></div>
+          <div class="stat composure" style="text-align:right">
+          <div class="k">Composure · <span id="level">Lv 1</span></div>
+          <div id="mood" class="mood mood-calm">Calm</div>
+          <div id="lives"></div>
+        </div>
       </div>
+      <div id="chalChip" class="hide"><small id="chalLabel">TODAY</small><b id="chalProg">0 / 0</b></div>
+      <div id="rivalChip" class="hide"><b id="rivalChipText">0m TO BEAT FRIEND</b></div>
+      <div id="dailyChip" class="hide"><b id="dailyChipText">DAILY · 0m</b></div>
+      <div id="comboChip"></div>
       <div id="flash"></div>
       <div id="banner"><small id="bKick">LEVEL 1</small><b id="bName">CEREAL AISLE</b></div>
       <div id="pops"></div>
@@ -38,11 +47,15 @@
       <div class="card">
         <div class="eyebrow">Feel prototype · v0.1</div>
         <h1>Sidewalk Zombies</h1>
-        <p class="tag">They're not undead. They're just on their phones. Four scenes: cereal aisle, boardwalk influencers, food-court GPS zombies, then a beach of ring lights. Grab coins. Bonk. Survive.</p>
+        <p class="tag">They're not undead. They're just on their phones. Seven scenes: cereal aisle, boardwalk, food court, beach, parking garage, train station, then the airport. Grab coins. Bonk. Survive.</p>
         <div class="legend">
           <div class="row"><span class="dot" style="background:var(--talk)"></span><div><b>Calling</b> — <span>phone on the ear, wandering left and right across the aisle.</span></div></div>
           <div class="row"><span class="dot" style="background:var(--text)"></span><div><b>Texting</b> — <span>head down, walking straight at you. Easy to read, if you look.</span></div></div>
           <div class="row"><span class="dot" style="background:var(--selfie)"></span><div><b>Filming</b> — <span>stopped dead in the middle of the aisle. A wall.</span></div></div>
+          <div class="row"><span class="dot" style="background:#4a9fd8"></span><div><b>Navigator</b> — <span>laneswap or sudden 180 while staring at Maps.</span></div></div>
+          <div class="row"><span class="dot" style="background:#b07aff"></span><div><b>Photographer</b> — <span>walking backward into traffic for the shot.</span></div></div>
+          <div class="row"><span class="dot" style="background:#ff7eb9"></span><div><b>Couple</b> — <span>two wide. Hit one, both go down.</span></div></div>
+          <div class="row"><span class="dot" style="background:#5fe0a0"></span><div><b>Scooter</b> — <span>quiet, fast, and somehow still on their phone.</span></div></div>
         </div>
         <div class="keys">
           <span><kbd>A</kbd> <kbd>D</kbd> or <kbd>&larr;</kbd> <kbd>&rarr;</kbd> weave</span><span class="sep">·</span>
@@ -50,8 +63,27 @@
           <span>on phone: <b>drag</b> to steer, tap the button</span>
         </div>
         <p class="vault">Wallet: <b id="vault">0</b> coins saved</p>
+        <p class="chal" id="menuChal">Today: …</p>
+        <div class="rival-banner hide" id="rivalBanner">
+          <b id="rivalHeadline">Someone survived. Can you beat it?</b>
+          <div class="rival-actions">
+            <button type="button" id="rivalAccept">Accept challenge</button>
+            <button type="button" class="ghost" id="rivalSkip">Not now</button>
+          </div>
+        </div>
+        <div class="shop" id="shop">
+          <div class="shop-head"><span>Locker</span><b id="shopVault">0¢</b></div>
+          <div class="shop-tabs">
+            <button type="button" data-tab="look" class="on">Looks</button>
+            <button type="button" data-tab="bonk">Bonks</button>
+            <button type="button" data-tab="horn">Horns</button>
+          </div>
+          <div class="shop-list" id="shopList"></div>
+        </div>
         <button class="play" id="start">Hit the aisle →</button>
-        <p class="foot"><b>SHOVE</b> into the shelves. <b>BAT</b> launches them. <b>HORN</b> honks them aside. <b>GUN</b> sprays a thin line for 10s. <b>BOMB</b> clears everyone. <b>COINS</b> are arcade candy. Clear 500 / 1100 / 1800 for the next scene and a bonus life. Bumping someone cold costs composure.</p>
+        <button class="play daily" id="daily">Daily Sidewalk →</button>
+        <p class="daily-best" id="dailyBest">Daily Sidewalk · …</p>
+        <p class="foot"><b>SHOVE</b> into the shelves. <b>BAT</b> launches them. <b>HORN</b> honks them aside. <b>GUN</b> sprays a thin line for 5s. <b>BOMB</b> clears everyone. <b>COINS</b> are arcade candy. Clear 1000 / 2200 / 3600 / 5200 / 7000 / 9000 for the next scene and a bonus life. Bumping someone cold costs composure.</p>
       </div>
     </div>
 
@@ -80,16 +112,38 @@
     </div>
 
     <div class="screen hide" id="over">
-      <div class="card">
-        <div class="eyebrow" id="verdict">Composure: gone</div>
-        <h1 id="overTitle">BONK!</h1>
+      <div class="card over-card">
+        <div class="eyebrow" id="verdict">RUN REPORT</div>
+        <h1 id="overTitle">SIDEWALK STATISTIC</h1>
+        <p class="over-class" id="overClass">Another satisfied customer of gravity</p>
         <p class="tag" id="overMsg">A texter used you as a bumper.</p>
         <div class="final">
-          <div class="stat2"><div class="k">This run</div><div class="v" id="fScore">0</div></div>
+          <div class="stat2"><div class="k">Distance</div><div class="v" id="fDist">0</div></div>
+          <div class="stat2"><div class="k">Chaos</div><div class="v" id="fChaos">0</div></div>
+          <div class="stat2"><div class="k">Total</div><div class="v" id="fScore">0</div></div>
           <div class="stat2"><div class="k">Best</div><div class="v best" id="fBest">0</div></div>
+          <div class="stat2"><div class="k">Bonks</div><div class="v" id="fBonks">0</div></div>
           <div class="stat2"><div class="k">Best combo</div><div class="v" id="fCombo">0</div></div>
+          <div class="stat2"><div class="k">PB combo</div><div class="v" id="fComboBest">0</div></div>
+          <div class="stat2"><div class="k">Near misses</div><div class="v" id="fNear">0</div></div>
+          <div class="stat2"><div class="k">Chains</div><div class="v" id="fChains">0</div></div>
           <div class="stat2"><div class="k">Coins</div><div class="v gold" id="fCoins">0</div></div>
         </div>
+        <p class="over-tip" id="overTip"></p>
+        <p class="over-daily hide" id="overDaily"></p>
+        <p class="over-rival hide" id="overRival"></p>
+        <div class="share-row hide" id="shareRow">
+          <img id="sharePreview" class="share-preview hide" alt="Run result card" />
+          <div class="share-actions">
+            <button type="button" class="share-btn" id="shareSend">Share card</button>
+            <button type="button" class="share-btn ghost" id="shareSave">Save PNG</button>
+          </div>
+        </div>
+        <div class="challenge-box" id="challengeBox">
+          <input id="handleInput" class="handle-input" maxlength="14" placeholder="Your name for challenges" autocomplete="nickname" />
+          <button type="button" class="share-btn" id="challengeFriend">Challenge a friend →</button>
+        </div>
+        <p class="chal over" id="overChal"></p>
         <button class="play" id="again">Back in the aisle →</button>
       </div>
     </div>

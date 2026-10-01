@@ -13,7 +13,7 @@ import { camera, renderer, scene } from '../render/renderer';
 import { LOOKS } from '../scene/looks';
 import { buildWorld } from '../scene/worlds';
 import { G, S, keys } from '../state';
-import { setRandomSource } from '../util';
+import { setRandomSource, mulberry32 } from '../util';
 import { enterNextLevel } from '../systems/levels';
 import { start } from '../systems/lifecycle';
 import { collectPower, doShove } from '../systems/powers';
@@ -22,14 +22,11 @@ import { collectPower, doShove } from '../systems/powers';
 // Open the game with ?replay, then run window.__replay.run(1234, 7200) in the console.
 // Fixed 1/60s steps, seeded game RNG (see rand() in util.ts), scripted input. Returns a trace + hash to diff.
 function runReplay(seed: number, frames: number) {
-  let a = seed >>> 0, calls = 0;
+  let calls = 0;
+  const src = mulberry32(seed);
   setRandomSource(() => {
     calls++;
-    a = (a + 0x6D2B79F5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    return src();
   });
   const lines: string[] = [];
   const cycle = ['cart', 'horn', 'gun', 'bomb'];

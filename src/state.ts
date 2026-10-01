@@ -14,6 +14,11 @@ export const G = {
   // run
   dist: 0, speed: SPEED, lives: LIVES_MAX, combo: 0, bestCombo: 0, invuln: 0, shake: 0,
   level: 1, scoreAcc: 0, best: readStored('sz_best'),
+  bestComboEver: readStored('sz_best_combo'),
+  bestDist: readStored('sz_best_dist'),
+  // bonk combo / near-miss / chains (Stage 1)
+  comboTimer: 0, nearMisses: 0, nearMissStreak: 0, chainReactions: 0, bonks: 0,
+  lateralSpeed: 0, // recent |dx/dt| for near-miss anti-farm
   // powers
   shoveCd: 0, lastCd: POWERS.shoulder.cd, power: 'shoulder', cartRush: 0, gunT: 0, gunCd: 0, scareT: 0,
   // player and input
@@ -24,9 +29,17 @@ export const G = {
   coins: 0, lvCoins: 0, coinStreak: 0, coinStreakT: 0, vault: readStored('sz_vault'),
   // spawn timers
   spawnTimer: 0, pickTimer: 0, coinTimer: 0,
+  encCd: 0, // Stage 2B special-encounter cooldown
+  // Stage 3 random events
+  evtId: '' as string, // active event id, or ''
+  evtT: 0,             // seconds remaining
+  evtCd: 0,            // cooldown until next event can start
+  evtTargetX: 0,       // Free WiFi hotspot X
   // camera and time
   last: performance.now(), baseFov: CAM_FOV, fovKick: 0, hitStop: 0,
   worldLevel: 1,
+  // experimental Rage Mode (FEATURE_RAGE)
+  rageT: 0,
 };
 
 export function stageOf(lv = G.level) {

@@ -55,4 +55,28 @@ export const LOOKS: Record<number, Look> = {
     env: 'noon', envIntensity: 0.35,
     grade: { lift: [0, 0, 0.005], gain: [1.02, 1.01, 0.98], saturation: 1.08, contrast: 1.04 },
   },
+  // 5. Parking garage: sodium/fluorescent, tight fog.
+  5: {
+    background: 0x6e675c, fogNear: 18, fogFar: 58,
+    hemiSky: 0xffe6c4, hemiGround: 0x3a3830, hemiIntensity: 0.45,
+    sunColor: 0xffd9a0, sunIntensity: 0.28, sunPosition: [0, 18, 4],
+    env: 'room', envIntensity: 0.22,
+    grade: { lift: [0.012, 0.008, 0], gain: [1.04, 0.97, 0.86], saturation: 0.9, contrast: 1.05 },
+  },
+  // 6. Train station: cool daylight under a canopy, steel blues.
+  6: {
+    background: 0x8aa0b4, fogNear: 20, fogFar: 70,
+    hemiSky: 0xe8eef4, hemiGround: 0x5a646e, hemiIntensity: 0.7,
+    sunColor: 0xd8e4f0, sunIntensity: 0.4, sunPosition: [-3, 20, 5],
+    env: 'room', envIntensity: 0.28,
+    grade: { lift: [0, 0.01, 0.02], gain: [0.96, 1, 1.04], saturation: 0.92, contrast: 1.04 },
+  },
+  // 7. Airport: bright terminal, cool glass and orange accents.
+  7: {
+    background: 0xc8d8e8, fogNear: 24, fogFar: 80,
+    hemiSky: 0xf4f8fc, hemiGround: 0x8a94a0, hemiIntensity: 0.85,
+    sunColor: 0xfff6e8, sunIntensity: 0.55, sunPosition: [6, 22, 8],
+    env: 'noon', envIntensity: 0.4,
+    grade: { lift: [0.005, 0.008, 0.015], gain: [1.02, 1.01, 1.04], saturation: 1.02, contrast: 1.03 },
+  },
 };

@@ -5,6 +5,7 @@ import { pbr } from '../../render/materials';
 import { QUALITY } from '../../render/quality';
 import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 import { Atlas, Paint } from '../kit/atlas';
+import { paintPhoto } from './photo';
 
 const FONT = '"Bricolage Grotesque", "Arial Black", "Helvetica Neue", sans-serif';
 
@@ -65,10 +66,10 @@ let cached: FoodCourtKit | null = null;
 function floorTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#efe3cc'; ctx.fillRect(0, 0, 128, 128);
-  ctx.fillStyle = '#d3b98f'; ctx.fillRect(0, 0, 64, 64); ctx.fillRect(64, 64, 64, 64);
-  // Grout lines so the checker reads at a glance.
-  ctx.fillStyle = '#c4a87a';
+  paintPhoto(ctx, 128, 128, 'terrazzo', 8);
+  ctx.fillStyle = 'rgba(180, 140, 90, 0.22)';
+  ctx.fillRect(0, 0, 64, 64); ctx.fillRect(64, 64, 64, 64);
+  ctx.fillStyle = 'rgba(140, 110, 70, 0.35)';
   ctx.fillRect(62, 0, 4, 128); ctx.fillRect(0, 62, 128, 4);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -97,10 +98,10 @@ export function foodCourtKit(): FoodCourtKit {
     ctx.font = `800 ${Math.floor(h * 0.5)}px ${FONT}`;
     ctx.fillText('★ FOOD COURT ★', w / 2, h / 2 + 2, w - 16);
   });
-  atlas.add('wallA', 32, 32, (ctx, w, h) => { ctx.fillStyle = '#f6e3c8'; ctx.fillRect(0, 0, w, h); });
-  atlas.add('wallB', 32, 32, (ctx, w, h) => { ctx.fillStyle = '#e9f0e0'; ctx.fillRect(0, 0, w, h); });
+  atlas.add('wallA', 32, 32, (ctx, w, h) => { paintPhoto(ctx, w, h, 'plaster', 12); ctx.fillStyle = 'rgba(246,227,200,0.4)'; ctx.fillRect(0, 0, w, h); });
+  atlas.add('wallB', 32, 32, (ctx, w, h) => { paintPhoto(ctx, w, h, 'plaster', 13); ctx.fillStyle = 'rgba(233,240,224,0.4)'; ctx.fillRect(0, 0, w, h); });
   atlas.add('counter', 32, 32, (ctx, w, h) => {
-    ctx.fillStyle = '#f7efe0'; ctx.fillRect(0, 0, w, h);
+    paintPhoto(ctx, w, h, 'wood', 14);
     ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(0, h * 0.7, w, h * 0.3);
   });
   atlas.add('flat', 16, 16, (ctx, w, h) => { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); });

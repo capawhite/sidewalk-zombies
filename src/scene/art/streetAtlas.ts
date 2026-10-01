@@ -5,6 +5,7 @@ import { QUALITY } from '../../render/quality';
 import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 import { Atlas, Paint } from '../kit/atlas';
 import { makeRng } from '../kit/parts';
+import { paintPhoto } from './photo';
 
 const FONT = '"Bricolage Grotesque", "Arial Black", "Helvetica Neue", sans-serif';
 
@@ -56,7 +57,8 @@ function paintFacade(i: number): Paint {
   const rnd = makeRng(700 + i);
   return (ctx, w, h) => {
     const Y = (m: number) => h - m * PX; // y in metres above the ground -> canvas y
-    ctx.fillStyle = shop.wall; ctx.fillRect(0, 0, w, h);
+    paintPhoto(ctx, w, h, 'plaster', 70 + i);
+    ctx.fillStyle = shop.wall; ctx.globalAlpha = 0.55; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1;
     // Stucco mottling.
     for (let k = 0; k < 500; k++) {
       ctx.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(90,60,30,0.05)';
@@ -121,13 +123,12 @@ let cached: StreetKit | null = null;
 function boardsTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const ctx = c.getContext('2d')!;
+  paintPhoto(ctx, 128, 128, 'wood', 33);
   const rnd = makeRng(33);
-  const tones = ['#c9a674', '#bf9c68', '#d3b382', '#c4a070'];
   for (let p = 0; p < 4; p++) { // four planks running across the walkway
-    ctx.fillStyle = tones[p]; ctx.fillRect(0, p * 32, 128, 32);
-    for (let g = 0; g < 26; g++) { ctx.fillStyle = `rgba(90,60,30,${0.05 + rnd() * 0.07})`; ctx.fillRect(rnd() * 128, p * 32 + 2 + rnd() * 26, 20 + rnd() * 50, 1); }
     ctx.fillStyle = 'rgba(60,40,20,0.55)'; ctx.fillRect(0, p * 32 + 30, 128, 2);          // seam
     ctx.fillStyle = 'rgba(60,40,20,0.5)'; ctx.fillRect(6, p * 32 + 14, 3, 3); ctx.fillRect(121, p * 32 + 14, 3, 3); // nails
+    for (let g = 0; g < 8; g++) { ctx.fillStyle = `rgba(90,60,30,${0.04 + rnd() * 0.05})`; ctx.fillRect(rnd() * 128, p * 32 + 2 + rnd() * 26, 20 + rnd() * 50, 1); }
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

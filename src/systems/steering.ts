@@ -32,6 +32,7 @@ export function updatePlayer(dt: number, now: number) {
   if (player.position.x > CLAMP_X) { player.position.x = CLAMP_X; G.vx = 0; }
   if (player.position.x < -CLAMP_X) { player.position.x = -CLAMP_X; G.vx = 0; }
   const instV = (player.position.x - prevX) / Math.max(dt, 0.0001);
+  G.lateralSpeed = Math.max(Math.abs(instV), G.lateralSpeed * Math.max(0, 1 - dt * 4));
   G.lean += (clamp(instV / 8, -1, 1) - G.lean) * Math.min(1, dt * STEER_LEAN_SMOOTH);
   player.rotation.z = -G.lean * STEER_LEAN;
   player.rotation.y = G.lean * STEER_YAW;
@@ -41,7 +42,7 @@ export function updatePlayer(dt: number, now: number) {
     player.position.y = Math.sin(u * Math.PI) * 0.28;
     if (G.hopT <= 0) { G.hopT = 0; player.position.y = 0; }
   } else player.position.y = 0;
-  animatePerson(player, dt, 0.55);
+  animatePerson(player, dt, 0.72);
   batProp.visible = G.power === 'cart' || G.cartRush > 0;
   hornProp.visible = G.power === 'horn' || G.scareT > 0;
 }

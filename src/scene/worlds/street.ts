@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { AISLE_W, COL, SEG_LEN } from '../../config';
 import { glowColor, mat } from '../../render/materials';
 import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
+import { photoMap } from '../art/photo';
 import { AWNING_COUNT, BOARDWALK_W, FACADE_COUNT, FACADE_H, FACADE_W, streetKit } from '../art/streetAtlas';
 import { Face } from '../kit/atlas';
 import { atlasBox, makeRng, shadedGround } from '../kit/parts';
@@ -16,7 +17,8 @@ const CURB_X = AISLE_W * 0.5 + 0.15;
 const BOARDWALK_X = CURB_X + 0.1 + BOARDWALK_W / 2;
 const BAYS = SEG_LEN / FACADE_W;
 
-const matRoad = mat(COL.road, {
+const matRoad = mat(0xffffff, {
+  map: photoMap('asphalt', 256, (AISLE_W + 2) / 3, SEG_LEN / 3, 4),
   roughness: 0.9,
   normalMap: grainNormal('coarse', (AISLE_W + 2) / 1.5, SEG_LEN / 1.5),
   normalScale: SUBTLE_NORMAL,

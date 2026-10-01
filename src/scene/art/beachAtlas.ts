@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { BIKINIS } from '../../config';
 import { pbr } from '../../render/materials';
 import { Atlas } from '../kit/atlas';
+import { paintPhoto } from './photo';
 
 const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
 
@@ -42,10 +43,7 @@ export function beachKit(): BeachKit {
     ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(0, 0, 4, h); ctx.fillRect(w - 4, 0, 4, h);
   }));
   atlas.add('wood', 64, 64, (ctx, w, h) => {
-    ctx.fillStyle = '#c9a674'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(90,60,30,0.18)';
-    for (let y = 4; y < h; y += 8) ctx.fillRect(0, y, w, 2);
-    ctx.fillStyle = 'rgba(255,230,180,0.2)'; ctx.fillRect(0, 0, w, 3);
+    paintPhoto(ctx, w, h, 'wood', 21);
   });
   atlas.add('cooler', 32, 32, (ctx, w, h) => {
     ctx.fillStyle = '#3d7ea6'; ctx.fillRect(0, 0, w, h);

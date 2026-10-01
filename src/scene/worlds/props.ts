@@ -56,3 +56,18 @@ export function addBench(g: THREE.Group, x: number, z: number, rotY: number) {
   bench.rotation.y = rotY;
   g.add(bench);
 }
+
+/** Rolling luggage — airport / station gag prop. */
+export function addLuggage(g: THREE.Group, x: number, z: number, rotY: number, color = 0x2a5a8a) {
+  const bag = new THREE.Group();
+  add(bag, new THREE.BoxGeometry(0.55, 0.7, 0.38), color, 0, 0.45, 0);
+  add(bag, new THREE.BoxGeometry(0.08, 0.35, 0.08), 0x1a1a1a, 0, 0.95, -0.05); // handle
+  for (const [sx, sz] of [[-0.18, 0.12], [0.18, 0.12], [-0.18, -0.12], [0.18, -0.12]]) {
+    const w = add(bag, new THREE.CylinderGeometry(0.06, 0.06, 0.08, 6), 0x222226, sx, 0.08, sz);
+    w.rotation.z = Math.PI / 2;
+  }
+  bag.position.set(x, 0, z);
+  bag.rotation.y = rotY;
+  g.add(bag);
+}
+

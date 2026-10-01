@@ -78,7 +78,7 @@ export const TALK_DRIFT = 2.2;
 export const TALK_DRIFT_RATE = 1.55;
 export const CART_LAUNCH = 22;
 export const CART_GRAVITY = 16;
-export const GUN_DURATION = 10;
+export const GUN_DURATION = 5;
 export const GUN_RATE = 0.11;
 export const GUN_SPEED = 38;
 export const GUN_HIT_X = 0.38;
@@ -86,7 +86,7 @@ export const GUN_HIT_X = 0.38;
 export const GUN_HIT_Z = 0.55;
 export const GUN_FRONT = 0.5;
              // must be ahead — never the people at your hips
-export const GUN_STACK_MAX = 20;
+export const GUN_STACK_MAX = 10;
 export const GUN_PACK_MORE = 1.2;
 export const GUN_PACK_GAP = 1.05;
 export const GUN_PACK_FILL = 2;
@@ -102,9 +102,55 @@ export const INF_DRIFT_RATE = 1.15;
 export const COIN_VALUE = 12;
 export const COIN_GAP = 3.1;
 export const COIN_1UP = 40;
+
+// ---------- Stage 1: bonk / combo / near-miss / chain ----------
+export const COMBO_WINDOW = 1.85;          // seconds between bonks before combo resets
+export const COMBO_SCORE_K = 0.12;         // bonus per combo step above 1
+export const COMBO_MULT_CAP = 1.8;         // max score multiplier from combo
+export const SHOVE_HITSTOP = 0.055;        // micro-pause on a successful shove
+export const SHOVE_SHAKE = 0.38;           // slightly stronger than POWERS.shoulder.shake
+export const CHAIN_RADIUS = 1.35;          // knocked body must be this close to transfer
+export const CHAIN_MAX_PER_FRAME = 4;
+export const CHAIN_SCORE = 10;             // base chaos points per chain transfer
+export const NEAR_MISS_GAP = 1.45;         // |dx| under this counts (was 2.1)
+export const NEAR_MISS_SCORE = 8;          // base chaos for a near miss
+export const NEAR_MISS_STREAK_K = 2;       // +points per near-miss streak step
+export const NEAR_MISS_STEER = 0.55;       // need recent lateral speed (m/s) to score
+export const FEATURE_RAGE = false;         // experimental; leave off until playtested
+export const RAGE_DURATION = 2.4;
+export const RAGE_KNOCK_SCALE = 1.35;
+export const RAGE_SHOVE_CD_SCALE = 0.55;
+
+// ---------- Stage 2: enemy archetypes ----------
+export const NAV_TURN_MIN = 1.4;           // seconds between navigator lane-swaps / 180s
+export const NAV_TURN_MAX = 2.6;
+export const NAV_LANE_STEP = 1.7;          // one slot sideways
+export const NAV_SPIN_T = 0.85;            // how long they stay facing the wrong way
+export const PHOTO_WOBBLE = 0.12;          // slight sway while backing up
+export const SCOOTER_EXTRA = 2.6;          // extra approach speed (m/s toward camera)
+export const COUPLE_GAP = 0.58;            // half-spacing between linked partners
+export const HIT_HALF_W = 1.15;            // default player-collision half-width
+export const SCOOTER_HIT_HALF_W = 1.05;
+
+// ---------- Stage 2B: special encounters ----------
+export const ENC_FIRST_DELAY = 18;         // seconds into a run before first set piece
+export const ENC_COOLDOWN_MIN = 22;        // between encounters
+export const ENC_COOLDOWN_MAX = 36;
+export const ENC_WAVE_PAUSE = 1.9;         // hold normal spawn waves so the set piece reads
+export const ENC_OPEN_LANES = 1;           // always leave this many lanes clear (fairness)
+
+// ---------- Stage 3: random run events ----------
+export const EVT_FIRST_DELAY = 26;         // first temporary event (after early encounters settle)
+export const EVT_COOLDOWN_MIN = 26;
+export const EVT_COOLDOWN_MAX = 40;
+export const EVT_WIFI_PULL = 1.9;          // lateral ease rate toward hotspot
+export const EVT_BATTERY_PULL = 1.7;       // lateral ease rate toward curb chargers
+export const EVT_NEWPHONE_GAP = 0.55;      // spawn-gap scale during New Phone Release
+export const EVT_NEWPHONE_FILL = 1;        // extra lane fill (still capped under 5)
+
 export const STAGES: any[] = [
   {
-    id: 1, name: 'CEREAL AISLE', world: 'aisle', crowd: 'aisle', clearAt: 500,
+    id: 1, name: 'CEREAL AISLE', world: 'aisle', crowd: 'aisle', clearAt: 1000,
     kit: ['cart', 'horn', 'bomb'],
     curtain: {
       kicker: '★ AISLE ACE ★', title: 'YOU MADE IT!',
@@ -113,7 +159,7 @@ export const STAGES: any[] = [
     },
   },
   {
-    id: 2, name: 'THE BOARDWALK', world: 'street', crowd: 'inf', clearAt: 1100,
+    id: 2, name: 'THE BOARDWALK', world: 'street', crowd: 'inf', clearAt: 2200,
     kit: ['gun', 'cart', 'bomb'],
     curtain: {
       kicker: '★ BOARDWALK STAR ★', title: 'INFLUENCED!',
@@ -122,7 +168,7 @@ export const STAGES: any[] = [
     },
   },
   {
-    id: 3, name: 'FOOD COURT', world: 'mall', crowd: 'mall', clearAt: 1800,
+    id: 3, name: 'FOOD COURT', world: 'mall', crowd: 'mall', clearAt: 3600,
     kit: ['horn', 'gun', 'bomb'],
     curtain: {
       kicker: '★ MALL RAT ★', title: 'SALE SURVIVED!',
@@ -131,8 +177,35 @@ export const STAGES: any[] = [
     },
   },
   {
-    id: 4, name: 'THE BEACH', world: 'beach', crowd: 'beach', clearAt: 0,
+    id: 4, name: 'THE BEACH', world: 'beach', crowd: 'beach', clearAt: 5200,
     kit: ['cart', 'horn', 'gun'],
+    curtain: {
+      kicker: '★ BEACH BUM ★', title: 'SUNBURN SURVIVED!',
+      sub: "Sand's cleared. Next: the parking garage — stall hunts, reverse cams, and people who brake for a bar of signal.",
+      go: 'Hit the garage →',
+    },
+  },
+  {
+    id: 5, name: 'PARKING GARAGE', world: 'garage', crowd: 'garage', clearAt: 7000,
+    kit: ['horn', 'gun', 'bomb'],
+    curtain: {
+      kicker: '★ VALIDATED ★', title: 'TICKET CLEARED!',
+      sub: "Garage survived. Next: the train station — delayed trains, yellow lines, and folks who live on the arrivals board.",
+      go: 'Hit the station →',
+    },
+  },
+  {
+    id: 6, name: 'TRAIN STATION', world: 'station', crowd: 'station', clearAt: 9000,
+    kit: ['cart', 'horn', 'gun'],
+    curtain: {
+      kicker: '★ ON TIME ★', title: 'PLATFORM CLEARED!',
+      sub: "Station survived. Finale: the airport — departure boards, luggage piles, and scooters that think they're planes.",
+      go: 'Hit the airport →',
+    },
+  },
+  {
+    id: 7, name: 'THE AIRPORT', world: 'airport', crowd: 'airport', clearAt: 0,
+    kit: ['horn', 'gun', 'bomb'],
     curtain: null,
   },
 ];
@@ -141,4 +214,9 @@ export const TYPES: any = {
   text: { color: COL.text },
   selfie: { color: COL.selfie, blocker: true },
   inf: { color: 0xff4d8a },
+  // Stage 2 archetypes — each poses a different dodge problem
+  nav: { color: 0x4a9fd8 },       // GPS blue: sudden lane change / 180
+  photo: { color: 0xb07aff },     // purple: walks backward into you
+  couple: { color: 0xff7eb9 },    // pink: linked pair, extra width
+  scooter: { color: 0x5fe0a0 },   // mint: closes distance faster
 };

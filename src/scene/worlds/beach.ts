@@ -6,12 +6,14 @@ import * as THREE from 'three';
 import { AISLE_W, BIKINIS, SEG_LEN, SHELF_X } from '../../config';
 import { mat } from '../../render/materials';
 import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
+import { photoMap } from '../art/photo';
 import { mapUv } from '../kit/atlas';
 import { TOWEL_COUNT, beachKit } from '../art/beachAtlas';
 import { atlasBox, makeRng, shade } from '../kit/parts';
 import { addPalm } from './props';
 
-const matSand = mat(0xecd3a0, {
+const matSand = mat(0xffffff, {
+  map: photoMap('sand', 256, (AISLE_W + 14) / 2.5, SEG_LEN / 2.5, 6),
   roughness: 1,
   normalMap: grainNormal('coarse', (AISLE_W + 14) / 1.2, SEG_LEN / 1.2),
   normalScale: SUBTLE_NORMAL,

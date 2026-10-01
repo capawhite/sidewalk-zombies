@@ -8,9 +8,12 @@ import { setSkyColor } from '../../render/sky';
 import { LOOKS } from '../looks';
 import { G } from '../../state';
 import { makeAisleSegment } from './aisle';
+import { makeAirportSegment } from './airport';
 import { makeBeachSegment } from './beach';
 import { makeFoodCourtSegment } from './foodcourt';
+import { makeGarageSegment } from './garage';
 import { MergeOptions, mergeStatic } from './merge';
+import { makeStationSegment } from './station';
 import { Strip, buildStrip, disposeStrip, scrollStrip } from './strip';
 import { makeStreetSegment } from './street';
 
@@ -23,6 +26,9 @@ const MERGE_OPTIONS: Record<number, MergeOptions> = {
   2: { groundAO: { height: 1.4, strength: 0.35 } },
   3: { groundAO: { height: 1.2, strength: 0.35 } },
   4: {},
+  5: { groundAO: { height: 1.1, strength: 0.45 } },
+  6: { groundAO: { height: 1.0, strength: 0.4 } },
+  7: { groundAO: { height: 0.9, strength: 0.3 } },
 };
 
 let strip: Strip | null = null;
@@ -49,7 +55,10 @@ function setTheme(lv: number) {
 }
 
 function makeVariant(lv: number, v: number) {
-  const raw = lv === 4 ? makeBeachSegment(v)
+  const raw = lv === 7 ? makeAirportSegment(v)
+    : lv === 6 ? makeStationSegment(v)
+    : lv === 5 ? makeGarageSegment(v)
+    : lv === 4 ? makeBeachSegment(v)
     : lv === 3 ? makeFoodCourtSegment(v)
     : lv === 2 ? makeStreetSegment(v)
     : makeAisleSegment(v);

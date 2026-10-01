@@ -52,8 +52,9 @@ window.addEventListener('pointerup', () => {
   G.pointerActive = false;
 });
 document.getElementById('shove')!.addEventListener('click', doShove);
-document.getElementById('start')!.addEventListener('click', start);
-document.getElementById('again')!.addEventListener('click', start);
+document.getElementById('start')!.addEventListener('click', () => start({ mode: 'free' }));
+document.getElementById('daily')!.addEventListener('click', () => start({ mode: 'daily' }));
+document.getElementById('again')!.addEventListener('click', () => start({ mode: 'free' }));
 document.getElementById('continue')!.addEventListener('click', (e) => {
   e.stopPropagation();
   if (G.state === S.clear) enterNextLevel();

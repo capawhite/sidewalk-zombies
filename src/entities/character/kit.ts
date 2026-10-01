@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { pbr } from '../../render/materials';
+import { applyClothingUvs, clothingAtlas } from './clothing';
 
 export type BodyName = 'man' | 'woman' | 'tank' | 'dress';
 // Each vertex belongs to one region; a character is recoloured by repainting a region's vertex colours.
@@ -41,8 +42,10 @@ export interface Kit {
 const BODIES: BodyName[] = ['man', 'woman', 'tank', 'dress'];
 export const kits = {} as Record<BodyName, Kit>;
 
-// One shared material for every character: colour comes from vertex colours.
+// One shared material for every character: fabric/skin in the map, tint in vertex colours.
 export const characterMaterial = pbr({ vertexColors: true, roughness: 0.62 });
+// Tripods and other crowd props share vertex colours but not the clothing map.
+export const crowdPropMaterial = pbr({ vertexColors: true, roughness: 0.5 });
 
 const REGION_OF_MATERIAL: Record<string, Region> = {
   Skin: 'skin', Shirt: 'shirt', Dress: 'shirt', Pants: 'pants', Shoes: 'shoes', Socks: 'socks',
@@ -54,6 +57,8 @@ let loading: Promise<void> | null = null;
 export function loadCharacterKits(): Promise<void> {
   if (!loading) {
     const loader = new GLTFLoader();
+    characterMaterial.map = clothingAtlas().texture;
+    characterMaterial.needsUpdate = true;
     loading = Promise.all(BODIES.map(async (name) => {
       const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}models/${name}.glb`);
       kits[name] = buildKit(name, gltf);
@@ -115,6 +120,7 @@ function buildKit(name: BodyName, gltf: any): Kit {
   }
   const regionVerts = {} as Record<Region, Uint32Array>;
   for (const r of REGIONS) regionVerts[r] = Uint32Array.from(regionList[r]);
+  applyClothingUvs(merged, regionVerts);
 
   // The merged mesh replaces the first one; the others are dropped from the template.
   host.geometry = merged;

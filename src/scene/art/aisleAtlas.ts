@@ -3,6 +3,7 @@
 import { pbr } from '../../render/materials';
 import { Atlas, Paint } from '../kit/atlas';
 import { makeRng } from '../kit/parts';
+import { paintPhoto } from './photo';
 
 export const PRODUCT_COUNT = 16;
 export const HEADER_NAMES = ['CEREAL', 'SNACKS', 'DRINKS', 'PASTA', 'CANNED', 'BAKERY'];
@@ -88,8 +89,8 @@ export function aisleKit(): AisleKit {
     atlas.add('side' + i, 16, 16, (ctx, w, h) => { ctx.fillStyle = PRODUCT_COLORS[i]; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(0, 0, w, h); });
   }
   atlas.add('plank', 64, 32, (ctx, w, h) => {
-    ctx.fillStyle = '#b9bcc0'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; for (let y = 2; y < h; y += 5) ctx.fillRect(0, y, w, 1);
+    paintPhoto(ctx, w, h, 'metal', 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'; for (let y = 2; y < h; y += 5) ctx.fillRect(0, y, w, 1);
   });
   atlas.add('priceRail', 256, 16, (ctx, w, h) => {
     const rnd = makeRng(91);
@@ -101,14 +102,19 @@ export function aisleKit(): AisleKit {
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, h - 2, w, 2);
   });
   atlas.add('panel', 32, 32, (ctx, w, h) => {
-    ctx.fillStyle = '#5b6d6a'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    paintPhoto(ctx, w, h, 'metal', 5);
+    ctx.fillStyle = 'rgba(40,70,65,0.45)'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     for (let y = 4; y < h; y += 8) for (let x = 4; x < w; x += 8) ctx.fillRect(x, y, 2, 2); // pegboard holes
   });
   atlas.add('upright', 16, 16, (ctx, w, h) => { ctx.fillStyle = '#7fb5a6'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(w * 0.6, 0, w * 0.4, h); });
-  atlas.add('kick', 32, 32, (ctx, w, h) => { ctx.fillStyle = '#39443f'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(0, 0, w, 3); });
+  atlas.add('kick', 32, 32, (ctx, w, h) => {
+    paintPhoto(ctx, w, h, 'metal', 9);
+    ctx.fillStyle = 'rgba(20,30,28,0.55)'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(0, 0, w, 3);
+  });
   atlas.add('cardboard', 128, 128, (ctx, w, h) => {
-    ctx.fillStyle = '#c69a62'; ctx.fillRect(0, 0, w, h);
+    paintPhoto(ctx, w, h, 'cardboard', 2);
     ctx.fillStyle = 'rgba(0,0,0,0.08)'; for (let y = 3; y < h; y += 6) ctx.fillRect(0, y, w, 1);
     ctx.fillStyle = '#e6d3ac'; ctx.fillRect(w * 0.42, 0, w * 0.16, h);
     ctx.fillStyle = '#5a3d1c'; ctx.font = `800 ${w * 0.16}px ${FONT}`; ctx.textAlign = 'center';

@@ -56,7 +56,7 @@ export function tone(freq: number, dur: number, type: OscillatorType, vol: numbe
   o.connect(g); g.connect(bus());
   o.start(t); o.stop(t + dur + 0.03);
 }
-function holdTone(
+export function holdTone(
   freq: number, dur: number, type: OscillatorType, vol: number, when = 0,
   filt: BiquadFilterType = 'bandpass', ffreq = 700, q = 3, freqEnd?: number,
 ) {

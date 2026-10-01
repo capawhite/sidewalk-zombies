@@ -8,6 +8,7 @@ import { AISLE_W, COL, SEG_LEN, SHELF_X } from '../../config';
 import { glowColor, mat } from '../../render/materials';
 import { SUBTLE_NORMAL, grainNormal } from '../../render/textures';
 import { HEADER_NAMES, PRODUCT_COUNT, aisleKit } from '../art/aisleAtlas';
+import { photoMap } from '../art/photo';
 import { Atlas, Face } from '../kit/atlas';
 import { atlasBox, makeRng, shadedGround } from '../kit/parts';
 
@@ -20,7 +21,8 @@ const ROWS = 4;
 const ROW_Y0 = 0.38, ROW_STEP = 0.78;
 const SHELF_TOP = 3.3;
 
-const matFloor = mat(COL.floor, {
+const matFloor = mat(0xffffff, {
+  map: photoMap('linoleum', 256, (AISLE_W + 10) / 2, SEG_LEN / 2, 7),
   roughness: 0.35,
   normalMap: grainNormal('fine', (AISLE_W + 10) / 1.5, SEG_LEN / 1.5),
   normalScale: SUBTLE_NORMAL,

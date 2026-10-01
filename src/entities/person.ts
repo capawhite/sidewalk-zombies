@@ -8,12 +8,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BIKINIS, COL, HAIR, LONG_HAIR, PANTS, SKINS } from '../config';
 import { mat } from '../render/materials';
 import { clamp, rand } from '../util';
-import { characterMaterial, kits, type BodyName, type GripName, type Kit, type PoseName, type Region } from './character/kit';
+import { characterMaterial, crowdPropMaterial, kits, type BodyName, type GripName, type Kit, type PoseName, type Region } from './character/kit';
 
 const billGeometry = new THREE.BoxGeometry(0.17, 0.02, 0.13);
 
 const CAP_COLOR = 0xd8362b;
-const RUN_SPEED = 1.7;   // player run cycle playback rate (the clip is 0.88 s long)
+const PLAYER_WALK_SPEED = 1.15; // brisk walk — not a run cycle
 const WALK_SPEED = 1.3;  // crowd walk cycle playback rate (the clip is 1.04 s long)
 
 // Everything a character needs after it is built. Lives in group.userData.rig.
@@ -60,7 +60,7 @@ function addBody(g: THREE.Group, name: BodyName, look: Look, facing: number): Ri
   // Characters share the merged geometry's buffers and only own their colour attribute.
   const geometry = new THREE.BufferGeometry();
   geometry.index = kit.geometry.index;
-  for (const attr of ['position', 'normal', 'skinIndex', 'skinWeight']) geometry.setAttribute(attr, kit.geometry.getAttribute(attr));
+  for (const attr of ['position', 'normal', 'uv', 'skinIndex', 'skinWeight']) geometry.setAttribute(attr, kit.geometry.getAttribute(attr));
   const colors = new THREE.BufferAttribute(new Float32Array(kit.geometry.getAttribute('position').count * 3), 3);
   colors.setUsage(THREE.DynamicDrawUsage);
   geometry.setAttribute('color', colors);
@@ -106,6 +106,19 @@ export function holdInRightHand(player: any, prop: THREE.Object3D, grip: GripNam
 const CROWD_BODIES: BodyName[] = ['man', 'woman', 'man', 'tank', 'woman', 'dress'];
 let crowdMade = 0;
 
+function startPlayerGait(g: any, rig: Rig) {
+  // Prefer the walk clip so the player reads as weaving through the crowd, not sprinting.
+  if (rig.run) { rig.run.stop(); rig.run = null; }
+  rig.pose?.stop();
+  g.userData.playerWalk = true;
+  rig.walk = rig.mixer.clipAction(rig.kit.clips.walk).play();
+  rig.idle = rig.mixer.clipAction(rig.kit.clips.idle).play();
+  rig.walk.setEffectiveWeight(1);
+  rig.idle.setEffectiveWeight(0);
+  rig.walk.timeScale = PLAYER_WALK_SPEED;
+  rig.mixer.update(0);
+}
+
 // `into` lets the player module hand in its (already exported) group once the models have loaded.
 export function makePerson(shirtColor: number, isPlayer: boolean, into?: THREE.Group): any {
   const g: any = into ?? new THREE.Group();
@@ -113,18 +126,44 @@ export function makePerson(shirtColor: number, isPlayer: boolean, into?: THREE.G
     ? { skin: COL.playerSkin, shirt: shirtColor, pants: COL.playerPants, hair: CAP_COLOR }
     : { skin: SKINS[(rand() * SKINS.length) | 0], shirt: shirtColor, pants: PANTS[(rand() * PANTS.length) | 0], hair: HAIR[(rand() * HAIR.length) | 0] };
   if (isPlayer) {
-    // The runner faces away from the camera.
+    // The walker faces away from the camera.
     const rig = addBody(g, 'man', look, Math.PI);
     const bill = new THREE.Mesh(billGeometry, mat(CAP_COLOR));
     mount(bill, rig.head, rig.kit.bill, rig.kit);
-    rig.run = rig.mixer.clipAction(rig.kit.clips.run).play();
-    rig.run.timeScale = RUN_SPEED;
-    rig.mixer.update(0);
+    g.userData.bill = bill;
+    startPlayerGait(g, rig);
   } else {
     const rig = addBody(g, CROWD_BODIES[crowdMade++ % CROWD_BODIES.length], look, 0);
     rig.phoneHolder = rig.palm;
   }
   return g;
+}
+
+/** Stage 5: rebuild the player body/colours for an equipped look. Props are re-parented by the caller. */
+export function applyPlayerLook(
+  g: any,
+  opts: { body: BodyName; skin: number; shirt: number; pants: number; hair: number; shoes?: number; cap?: boolean },
+  props: THREE.Object3D[],
+) {
+  const prev: Rig | undefined = g.userData.rig;
+  for (const p of props) { if (p.parent) p.parent.remove(p); }
+  if (prev) {
+    if (g.userData.bill && g.userData.bill.parent) g.userData.bill.parent.remove(g.userData.bill);
+    g.remove(prev.root);
+    prev.mixer.stopAllAction();
+  }
+  const look: Look = {
+    skin: opts.skin, shirt: opts.shirt, pants: opts.pants, hair: opts.hair, shoes: opts.shoes,
+  };
+  const rig = addBody(g, opts.body, look, Math.PI);
+  if (opts.cap !== false) {
+    const bill = new THREE.Mesh(billGeometry, mat(opts.hair));
+    mount(bill, rig.head, rig.kit.bill, rig.kit);
+    g.userData.bill = bill;
+  } else {
+    g.userData.bill = null;
+  }
+  startPlayerGait(g, rig);
 }
 
 export function makeInfluencer(): any {
@@ -138,7 +177,7 @@ export function makeInfluencer(): any {
   }, 0);
 
   // Tripod with a ring light, standing in front of the influencer. Its camera is drawn as the influencer's "phone".
-  const tripod = new THREE.Mesh(tripodGeometry(), characterMaterial);
+  const tripod = new THREE.Mesh(tripodGeometry(), crowdPropMaterial);
   tripod.castShadow = true;
   g.add(tripod);
   g.userData.inf = true;
@@ -173,11 +212,16 @@ const tripodCamera = new THREE.Matrix4().compose(
 );
 
 // ---------- poses and animation ----------
-// Switch a pooled character to the pose for `type` ('talk' | 'text' | 'selfie' | 'inf' | 'scared').
+// Switch a pooled character to the pose for a zombie type (or 'scared').
 export function applyPose(z: any, type: string) {
   const d = z.userData;
   const rig: Rig = d.rig;
-  const name: PoseName = type === 'selfie' ? 'film' : (type as PoseName);
+  const name: PoseName =
+    type === 'selfie' || type === 'photo' ? 'film'
+    : type === 'text' || type === 'nav' || type === 'scooter' ? 'text'
+    : type === 'inf' ? 'inf'
+    : type === 'scared' ? 'scared'
+    : 'talk'; // talk, couple, default
   const clips = rig.kit.poses[name];
   rig.mixer.stopAllAction();
   rig.pose = rig.mixer.clipAction(clips.pose).play();
@@ -193,6 +237,8 @@ export function applyPose(z: any, type: string) {
     rig.phoneAt = (rig.phoneAt ?? new THREE.Matrix4()).compose(clips.phone.position, clips.phone.quaternion, tmpScale.setScalar(rig.kit.propScale));
   } else rig.phoneAt = null;
   d.phone.visible = true;
+  // Walk-cycle rate hints (scooters hustle; photographers saunter).
+  if (rig.walk) rig.walk.timeScale = type === 'scooter' ? 1.55 : type === 'photo' ? 0.85 : 1;
   rig.mixer.update(0);
 }
 
@@ -206,31 +252,22 @@ export function phoneMatrix(z: any, out: THREE.Matrix4): boolean {
   return true;
 }
 
-// Extra head rotation (radians, about world axes) added on top of the animation, e.g. a sway while talking.
-export function setHeadSway(z: any, pitch: number, yaw: number, roll: number) {
-  const s = z.userData.rig.sway;
-  s[0] = pitch; s[1] = yaw; s[2] = roll;
-}
-
-const swayWorld = new THREE.Quaternion(), swayParent = new THREE.Quaternion(), swayEuler = new THREE.Euler(0, 0, 0, 'YXZ');
-function applySway(rig: Rig) {
-  const [pitch, yaw, roll] = rig.sway;
-  if (pitch === 0 && yaw === 0 && roll === 0) return;
-  swayWorld.setFromEuler(swayEuler.set(pitch, yaw, roll));
-  swayParent.copy(rig.kit.neckWorld);
-  // world rotation R applied on top of the head: local' = P^-1 * R * P * local
-  rig.head.quaternion.premultiply(swayWorld.premultiply(swayParent.clone().invert()).multiply(swayParent));
+// Extra head rotation was used for talk/nav flavours; disabled — on some kits it compounded
+// into a continuous head spin. Keep the API so call sites stay harmless.
+export function setHeadSway(z: any, _pitch: number, _yaw: number, _roll: number) {
+  const s = z.userData.rig?.sway;
+  if (s) { s[0] = 0; s[1] = 0; s[2] = 0; }
 }
 
 // Advance a character's animation. `amt` is how much it walks: about 0.05 = standing, 0.5 = brisk walk.
-// The player (run cycle only) ignores it.
+// Legacy run-cycle players skip blending; walk-gait players blend like the crowd.
 export function animatePerson(z: any, dt: number, amt: number) {
   const rig: Rig = z.userData.rig;
   if (rig.run) { rig.mixer.update(dt); return; }
   const w = clamp(amt * 2.6, 0, 1);
   rig.walk!.setEffectiveWeight(w);
   rig.idle!.setEffectiveWeight(1 - w);
-  rig.walk!.timeScale = WALK_SPEED;
+  // Keep the player's set gait rate; crowd uses the shared walk tempo.
+  if (!z.userData.playerWalk) rig.walk!.timeScale = WALK_SPEED;
   rig.mixer.update(dt);
-  applySway(rig);
 }

@@ -1,11 +1,11 @@
-// Cooldowns and power timers: shove, gun, invuln, coin streak, cart rush, horn scare ring.
-import { GUN_DURATION, GUN_RATE, POWERS } from '../config';
+// Cooldowns and power timers: shove, gun, invuln, coin streak, cart rush, horn scare ring, combo decay.
+import { FEATURE_RAGE, GUN_DURATION, GUN_RATE, POWERS } from '../config';
 import { gunProp, player, scareRing } from '../entities/player';
 import { PICK_COL } from '../entities/pools';
 import { elCool, elShoveName, flash } from '../hud/hud';
 import { wrap } from '../render/renderer';
 import { G } from '../state';
-import { fireGun, refreshPowerHud } from './powers';
+import { fireGun, refreshPowerHud, resetCombo } from './powers';
 
 export function updateTimers(dt: number) {
   if (G.shoveCd > 0) { G.shoveCd -= dt; if (G.shoveCd < 0) G.shoveCd = 0; }
@@ -35,6 +35,17 @@ export function updateTimers(dt: number) {
     const u = 1 - G.scareT / 0.4;
     scareRing.position.set(player.position.x, 0.08, player.position.z - 2);
     scareRing.scale.setScalar(1 + u * 10);
-    (scareRing.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.7 * (1 - u));
-  } else (scareRing.material as THREE.MeshBasicMaterial).opacity = 0;
+    (scareRing.material as any).opacity = Math.max(0, 0.7 * (1 - u));
+  } else (scareRing.material as any).opacity = 0;
+
+  // Bonk combo decay
+  if (G.combo > 0) {
+    G.comboTimer -= dt;
+    if (G.comboTimer <= 0) resetCombo();
+  }
+
+  if (FEATURE_RAGE && G.rageT > 0) {
+    G.rageT -= dt;
+    if (G.rageT <= 0) G.rageT = 0;
+  }
 }
