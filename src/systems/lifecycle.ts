@@ -96,7 +96,7 @@ export function gameOver(cause: string) {
   const snap = snapshotRun(cause, prevBest, prevComboPb, prevDistPb);
 
   G.vault += G.coins; try { localStorage.setItem('sz_vault', String(G.vault)); } catch (e) {}
-  elVault.textContent = String(G.vault);
+  if (elVault) elVault.textContent = elVault.id === 'shopVault' ? String(G.vault) + '¢' : String(G.vault);
   syncVaultDom();
   renderShop();
 

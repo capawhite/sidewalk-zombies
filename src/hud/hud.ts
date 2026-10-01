@@ -19,13 +19,13 @@ export const elScore = document.getElementById('score')!, elLives = document.get
   elBName = document.getElementById('bName')!, elMute = document.getElementById('mute')!,
   elFly = document.getElementById('cFly')!, elWallet = document.getElementById('wallet')!,
   elWCount = document.getElementById('wCount')!, elWNote = document.getElementById('wNote')!,
-  elVault = document.getElementById('vault')!,
+  elVault = document.getElementById('shopVault') || document.getElementById('vault'),
   elChaos = document.getElementById('chaos')!,
   elMood = document.getElementById('mood')!,
   elComboChip = document.getElementById('comboChip')!;
 elMute.addEventListener('click', toggleMute);
 elMute.classList.toggle('off', muted);
-elVault.textContent = String(G.vault);
+if (elVault) elVault.textContent = elVault.id === 'shopVault' ? String(G.vault) + '¢' : String(G.vault);
 
 const MOODS: { min: number; label: string; cls: string }[] = [
   { min: 5, label: 'Calm', cls: 'mood-calm' },
