@@ -45,25 +45,13 @@
 
     <div class="screen" id="menu">
       <div class="card">
-        <div class="eyebrow">Feel prototype · v0.1</div>
         <h1>Sidewalk Zombies</h1>
-        <p class="tag">They're not undead. They're just on their phones. Seven scenes: cereal aisle, boardwalk, food court, beach, parking garage, train station, then the airport. Grab coins. Bonk. Survive.</p>
-        <div class="legend">
-          <div class="row"><span class="dot" style="background:var(--talk)"></span><div><b>Calling</b> — <span>phone on the ear, wandering left and right across the aisle.</span></div></div>
-          <div class="row"><span class="dot" style="background:var(--text)"></span><div><b>Texting</b> — <span>head down, walking straight at you. Easy to read, if you look.</span></div></div>
-          <div class="row"><span class="dot" style="background:var(--selfie)"></span><div><b>Filming</b> — <span>stopped dead in the middle of the aisle. A wall.</span></div></div>
-          <div class="row"><span class="dot" style="background:#4a9fd8"></span><div><b>Navigator</b> — <span>laneswap or sudden 180 while staring at Maps.</span></div></div>
-          <div class="row"><span class="dot" style="background:#b07aff"></span><div><b>Photographer</b> — <span>walking backward into traffic for the shot.</span></div></div>
-          <div class="row"><span class="dot" style="background:#ff7eb9"></span><div><b>Couple</b> — <span>two wide. Hit one, both go down.</span></div></div>
-          <div class="row"><span class="dot" style="background:#5fe0a0"></span><div><b>Scooter</b> — <span>quiet, fast, and somehow still on their phone.</span></div></div>
-        </div>
+        <p class="tag">Weave past people glued to their phones. Don't get bumped.</p>
         <div class="keys">
-          <span><kbd>A</kbd> <kbd>D</kbd> or <kbd>&larr;</kbd> <kbd>&rarr;</kbd> weave</span><span class="sep">·</span>
-          <span><kbd>Space</kbd> knock</span><span class="sep">·</span>
-          <span>on phone: <b>drag</b> to steer, tap the button</span>
+          <span><kbd>A</kbd><kbd>D</kbd> move</span><span class="sep">·</span>
+          <span><kbd>Space</kbd> shove</span><span class="sep">·</span>
+          <span>phone: <b>drag</b></span>
         </div>
-        <p class="vault">Wallet: <b id="vault">0</b> coins saved</p>
-        <p class="chal" id="menuChal">Today: …</p>
         <div class="rival-banner hide" id="rivalBanner">
           <b id="rivalHeadline">Someone survived. Can you beat it?</b>
           <div class="rival-actions">
@@ -71,19 +59,18 @@
             <button type="button" class="ghost" id="rivalSkip">Not now</button>
           </div>
         </div>
-        <div class="shop" id="shop">
-          <div class="shop-head"><span>Locker</span><b id="shopVault">0¢</b></div>
-          <div class="shop-tabs">
-            <button type="button" data-tab="look" class="on">Looks</button>
-            <button type="button" data-tab="bonk">Bonks</button>
-            <button type="button" data-tab="horn">Horns</button>
+        <button class="play" id="start">Play</button>
+        <details class="locker">
+          <summary>Locker <b id="shopVault">0¢</b></summary>
+          <div class="shop" id="shop">
+            <div class="shop-tabs">
+              <button type="button" data-tab="look" class="on">Looks</button>
+              <button type="button" data-tab="bonk">Bonks</button>
+              <button type="button" data-tab="horn">Horns</button>
+            </div>
+            <div class="shop-list" id="shopList"></div>
           </div>
-          <div class="shop-list" id="shopList"></div>
-        </div>
-        <button class="play" id="start">Hit the aisle →</button>
-        <button class="play daily" id="daily">Daily Sidewalk →</button>
-        <p class="daily-best" id="dailyBest">Daily Sidewalk · …</p>
-        <p class="foot"><b>SHOVE</b> into the shelves. <b>BAT</b> launches them. <b>HORN</b> honks them aside. <b>GUN</b> sprays a thin line for 5s. <b>BOMB</b> clears everyone. <b>COINS</b> are arcade candy. Clear 1000 / 2200 / 3600 / 5200 / 7000 / 9000 for the next scene and a bonus life. Bumping someone cold costs composure.</p>
+        </details>
       </div>
     </div>
 

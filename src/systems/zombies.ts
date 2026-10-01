@@ -68,6 +68,11 @@ function updateNavigator(z: any, d: any, dt: number) {
   setHeadSway(z, 0.15, Math.sin(d.driftPhase) * 0.1, 0);
 }
 
+/** Base yaw: Math.PI = walking with the player, 0 = walking into them. */
+function faceBase(d: any) {
+  return d.faceAway ? Math.PI : 0;
+}
+
 export function updateZombies(dt: number, now: number) {
   const pz = player.position.z, px = player.position.x;
   const chainBudget = { left: CHAIN_MAX_PER_FRAME };
@@ -108,16 +113,18 @@ export function updateZombies(dt: number, now: number) {
     // Stage 3: No Signal — everyone walks like a person for a few seconds.
     if (eventIsNoSignal() && G.gunT <= 0) {
       z.position.x += (d.baseX - z.position.x) * Math.min(1, dt * 5);
-      z.rotation.y = 0;
+      z.rotation.y = faceBase(d);
       z.rotation.z = 0;
       setHeadSway(z, -0.32, Math.sin(now * 0.004 + d.driftPhase) * 0.05, 0);
     } else if (d.type === 'nav' && G.gunT <= 0) {
       d.driftPhase += dt;
       updateNavigator(z, d, dt);
     } else if (d.type === 'photo') {
-      // Walking backward toward the player (face spawn / -z while scrolling +z).
-      z.position.x = d.baseX + Math.sin(now * 0.003 + d.driftPhase) * PHOTO_WOBBLE;
-      z.rotation.y = Math.PI;
+      // Walking with the player (same facing); light weave like talkers.
+      d.driftPhase += dt * TALK_DRIFT_RATE * 0.7;
+      z.position.x = d.baseX + Math.sin(d.driftPhase) * Math.max(PHOTO_WOBBLE * 8, TALK_DRIFT * 0.55);
+      z.position.x = clamp(z.position.x, -CLAMP_X, CLAMP_X);
+      z.rotation.y = Math.PI + Math.sin(d.driftPhase) * 0.4;
       setHeadSway(z, -0.08, 0, Math.sin(now * 0.01) * 0.05);
     } else if (d.type === 'scooter') {
       z.position.x = d.baseX;
@@ -127,23 +134,28 @@ export function updateZombies(dt: number, now: number) {
     } else if (d.type === 'couple') {
       // Linked pair: stay on baseX; soft lean toward partner when present.
       z.position.x = d.baseX;
-      z.rotation.y = 0;
+      z.rotation.y = faceBase(d);
       if (d.link && d.link.active) {
         const toward = Math.sign(d.link.position.x - z.position.x) * 0.12;
         setHeadSway(z, 0, toward, 0);
       }
-    } else if ((d.type === 'talk' || d.type === 'inf') && G.gunT <= 0) {
+    } else if (
+      (d.type === 'talk' || d.type === 'inf' || ((d.type === 'text' || d.type === 'selfie') && d.faceAway))
+      && G.gunT <= 0
+    ) {
+      // Talk/inf always zigzag; same-direction texters/selfiers weave too.
       const rate = d.type === 'inf' ? INF_DRIFT_RATE : TALK_DRIFT_RATE;
       const amp = d.type === 'inf' ? INF_DRIFT : TALK_DRIFT;
+      const yawAmp = d.type === 'inf' ? 0.35 : 0.45;
       d.driftPhase += dt * rate;
       z.position.x = d.baseX + Math.sin(d.driftPhase) * amp;
       z.position.x = clamp(z.position.x, -CLAMP_X, CLAMP_X);
-      z.rotation.y = Math.sin(d.driftPhase) * (d.type === 'inf' ? 0.35 : 0.45);
+      z.rotation.y = faceBase(d) + Math.sin(d.driftPhase) * yawAmp;
       if (d.type === 'talk') setHeadSway(z, 0, 0, Math.sin(now * 0.008) * 0.04);
       else setHeadSway(z, 0, Math.sin(d.driftPhase) * 0.08, 0);
     } else if (d.type === 'text' || d.type === 'talk' || d.type === 'inf' || d.type === 'selfie') {
       z.position.x = d.baseX;
-      z.rotation.y = 0;
+      z.rotation.y = faceBase(d);
     }
 
     // Stage 3: Free WiFi / Low Battery — soft lateral pull after archetype motion.

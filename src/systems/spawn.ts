@@ -1,5 +1,5 @@
 // Spawning of crowds, pickups and coins.
-import { CLAMP_X, COIN_GAP, COUPLE_GAP, CROWD_RAMP_DIST, GUN_PACK_FILL, GUN_PACK_GAP,
+import { CLAMP_X, COIN_GAP, COUPLE_GAP, CROWD_RAMP_DIST, FACE_AWAY_CHANCE, GUN_PACK_FILL, GUN_PACK_GAP,
   GUN_PACK_LANES, GUN_PACK_MORE, GUN_PACK_ROWS, GUN_PACK_ROW_Z, GUN_PACK_SQUEEZE,
   GUN_PACK_Z_JITTER, HIT_HALF_W, NAV_TURN_MAX, NAV_TURN_MIN, SCOOTER_HIT_HALF_W,
   SPAWN_FILL_END, SPAWN_FILL_START, SPAWN_GAP, SPAWN_Z, TYPES,
@@ -139,14 +139,16 @@ export function spawnWave() {
 }
 
 function spawnCouple(x: number, zPos: number) {
-  const a = spawnZombie(clamp(x - COUPLE_GAP, -CLAMP_X, CLAMP_X), 'couple', zPos);
-  const b = spawnZombie(clamp(x + COUPLE_GAP, -CLAMP_X, CLAMP_X), 'couple', zPos);
+  // Partners share facing so the pair reads as walking together.
+  const faceAway = rand() < FACE_AWAY_CHANCE;
+  const a = spawnZombie(clamp(x - COUPLE_GAP, -CLAMP_X, CLAMP_X), 'couple', zPos, faceAway);
+  const b = spawnZombie(clamp(x + COUPLE_GAP, -CLAMP_X, CLAMP_X), 'couple', zPos, faceAway);
   a.userData.link = b;
   b.userData.link = a;
 }
 
 /** Shared spawn helper used by waves and special encounters. */
-export function spawnZombie(x: number, type: string, zPos?: number) {
+export function spawnZombie(x: number, type: string, zPos?: number, faceAway?: boolean) {
   const z = getZombie(type); const def = TYPES[type] || TYPES.inf;
   z.active = true; z.visible = true; z.userData.type = type; z.userData.def = def;
   z.userData.hit = false; z.userData.passed = false; z.userData.knocked = false; z.userData.tripT = 0;
@@ -156,8 +158,13 @@ export function spawnZombie(x: number, type: string, zPos?: number) {
   z.userData.navT = NAV_TURN_MIN + rand() * (NAV_TURN_MAX - NAV_TURN_MIN);
   z.userData.navSpin = 0;
   z.userData.hitHalfW = type === 'scooter' ? SCOOTER_HIT_HALF_W : HIT_HALF_W;
+  // Photos always walk with the player; talk/text/selfie/inf/couple pick a roll.
+  // Scooters and navs stay oncoming — they're charged threats.
+  const canFaceAway = type === 'photo' || type === 'talk' || type === 'text'
+    || type === 'selfie' || type === 'inf' || type === 'couple';
+  z.userData.faceAway = type === 'photo' || (canFaceAway && (faceAway ?? (rand() < FACE_AWAY_CHANCE)));
   z.position.set(x, 0, zPos ?? (SPAWN_Z + rand() * 3));
-  z.rotation.set(0, type === 'photo' ? Math.PI : 0, 0);
+  z.rotation.set(0, z.userData.faceAway ? Math.PI : 0, 0);
   if (type !== 'inf') setShirtColor(z, def.color);
   applyPose(z, type);
   return z;

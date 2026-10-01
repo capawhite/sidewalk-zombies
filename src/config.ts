@@ -20,23 +20,25 @@ export const HAIR = [0x1a1410, 0x3b2416, 0x5a3a22, 0x2b2b2b, 0x6e4a2e, 0xc8c2b4]
 export const BIKINIS = [0xff4d8a, 0xffef6a, 0x4fd2ff, 0xffffff, 0xff6b3d, 0xe85ad0, 0x2ad4c8];
 export const LONG_HAIR = [0x1a1410, 0x3b2416, 0xc8a050, 0x6e4a2e, 0x2b2b2b, 0xd4c4a0, 0x8b3a22];
 // ---------- feel knobs ----------
-export const STEER_MAX_SPEED = 5.5;
-      // was 12 — a tap should nudge, not leap
-export const STEER_ACCEL = 48;
-           // was 140 — hold to get up to speed
-export const STEER_DECEL = 160;
-          // stop quickly when you let go
-export const STEER_REVERSE = 80;
-         // was 220 — A↔D is gentler
-export const STEER_TAP_BUFFER = 0.02;
-    // was 0.07 — don't keep sliding after a tap
+export const STEER_MAX_SPEED = 3.4;
+      // hold to cross the aisle; taps should only nudge
+export const STEER_ACCEL = 18;
+            // ramp in — a short press never reaches full speed
+export const STEER_DECEL = 110;
+          // ease to a stop (was snappy 160)
+export const STEER_REVERSE = 42;
+         // A↔D direction changes ease rather than snap
+export const STEER_TAP_BUFFER = 0.012;
+   // brief coast after keyup so taps don't feel clipped
+export const STEER_TAP_SPEED = 1.5;
+       // post-keyup buffer aims here, not full STEER_MAX_SPEED
 export const STEER_TOUCH_SPAN = 8;
        // full-screen drag = this many world units (aisle is ~8)
-export const STEER_TOUCH_FOLLOW = 36;
-    // how fast we catch the finger
+export const STEER_TOUCH_FOLLOW = 28;
+    // catch the finger without overshooting
 export const STEER_TOUCH_DEAD_PX = 10;
    // ignore tiny finger jitter
-export const STEER_FLICK = 0.55;
+export const STEER_FLICK = 0.32;
          // leftover slide after a swipe (not a hold)
 export const STEER_LEAN = 0.22;
 export const STEER_YAW = 0.14;
@@ -115,7 +117,7 @@ export const CHAIN_SCORE = 10;             // base chaos points per chain transf
 export const NEAR_MISS_GAP = 1.45;         // |dx| under this counts (was 2.1)
 export const NEAR_MISS_SCORE = 8;          // base chaos for a near miss
 export const NEAR_MISS_STREAK_K = 2;       // +points per near-miss streak step
-export const NEAR_MISS_STEER = 0.55;       // need recent lateral speed (m/s) to score
+export const NEAR_MISS_STEER = 0.4;        // need recent lateral speed (m/s) to score
 export const FEATURE_RAGE = false;         // experimental; leave off until playtested
 export const RAGE_DURATION = 2.4;
 export const RAGE_KNOCK_SCALE = 1.35;
@@ -127,6 +129,8 @@ export const NAV_TURN_MAX = 2.6;
 export const NAV_LANE_STEP = 1.7;          // one slot sideways
 export const NAV_SPIN_T = 0.85;            // how long they stay facing the wrong way
 export const PHOTO_WOBBLE = 0.12;          // slight sway while backing up
+/** Chance a walkable NPC faces the same way as the player (talk/text/selfie/inf/couple). Photos always do. */
+export const FACE_AWAY_CHANCE = 0.42;
 export const SCOOTER_EXTRA = 2.6;          // extra approach speed (m/s toward camera)
 export const COUPLE_GAP = 0.58;            // half-spacing between linked partners
 export const HIT_HALF_W = 1.15;            // default player-collision half-width

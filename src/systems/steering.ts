@@ -1,5 +1,5 @@
 // Player steering, lean, hop and gait (play state only).
-import { CLAMP_X, STEER_ACCEL, STEER_DECEL, STEER_LEAN, STEER_LEAN_SMOOTH, STEER_MAX_SPEED, STEER_REVERSE, STEER_TOUCH_DEAD_PX, STEER_TOUCH_FOLLOW, STEER_TOUCH_SPAN, STEER_YAW } from '../config';
+import { CLAMP_X, STEER_ACCEL, STEER_DECEL, STEER_LEAN, STEER_LEAN_SMOOTH, STEER_MAX_SPEED, STEER_REVERSE, STEER_TAP_SPEED, STEER_TOUCH_DEAD_PX, STEER_TOUCH_FOLLOW, STEER_TOUCH_SPAN, STEER_YAW } from '../config';
 import { animatePerson } from '../entities/person';
 import { batProp, hornProp, player } from '../entities/player';
 import { wrap } from '../render/renderer';
@@ -20,10 +20,17 @@ export function updatePlayer(dt: number, now: number) {
     player.position.x = toward(player.position.x, targetX, STEER_TOUCH_FOLLOW * dt);
     G.vx = 0;
   } else {
-    let inp = 0;
-    if (keys.left || G.tapLeft > 0) inp -= 1;
-    if (keys.right || G.tapRight > 0) inp += 1;
-    const targetVx = inp * STEER_MAX_SPEED;
+    // Held keys use full speed; keyup buffer is a soft nudge so taps don't leap.
+    let held = 0;
+    let tap = 0;
+    if (keys.left) held -= 1;
+    else if (G.tapLeft > 0) tap -= 1;
+    if (keys.right) held += 1;
+    else if (G.tapRight > 0) tap += 1;
+    const inp = held || tap;
+    const targetVx = held
+      ? held * STEER_MAX_SPEED
+      : tap * STEER_TAP_SPEED;
     const reversing = inp !== 0 && G.vx !== 0 && Math.sign(inp) !== Math.sign(G.vx);
     const rate = inp === 0 ? STEER_DECEL : reversing ? STEER_REVERSE : STEER_ACCEL;
     G.vx = toward(G.vx, targetVx, rate * dt);

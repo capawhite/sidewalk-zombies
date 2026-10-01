@@ -47,13 +47,12 @@ wrap.addEventListener('pointermove', (e) => {
 window.addEventListener('pointerup', () => {
   if (G.pointerActive) {
     const flickU = (G.pointerFlick / Math.max(wrap.clientWidth, 1)) * STEER_TOUCH_SPAN * STEER_FLICK;
-    G.vx = clamp(flickU, -9, 9);
+    G.vx = clamp(flickU, -4, 4);
   }
   G.pointerActive = false;
 });
 document.getElementById('shove')!.addEventListener('click', doShove);
 document.getElementById('start')!.addEventListener('click', () => start({ mode: 'free' }));
-document.getElementById('daily')!.addEventListener('click', () => start({ mode: 'daily' }));
 document.getElementById('again')!.addEventListener('click', () => start({ mode: 'free' }));
 document.getElementById('continue')!.addEventListener('click', (e) => {
   e.stopPropagation();

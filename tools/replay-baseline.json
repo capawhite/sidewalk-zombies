@@ -1,8 +1,8 @@
 {
-  "note": "Open the game at /?replay on a fresh page load, wait for `await window.__ready` (character models loaded), then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. v3–v9 as before. Stages 4–10 (meta, share, daily, train/airport worlds) do not change the default harness hash (3228372543 / 110429) — Stage 10 worlds only appear after higher clear scores than the harness typically forces.",
+  "note": "Open the game at /?replay on a fresh page load, wait for `await window.__ready` (character models loaded), then run window.__replay.run(1234, 7200) in the console. hash, calls and count must match. v3–v9 as before. Stages 4–10 (meta, share, daily, train/airport worlds) do not change the default harness hash alone — Stage 10 worlds only appear after higher clear scores than the harness typically forces. Face-away crowd mix (same-direction walkers) bumps RNG call count.",
   "seed": 1234,
   "frames": 7200,
-  "hash": 3228372543,
-  "calls": 110429,
+  "hash": 448153237,
+  "calls": 112459,
   "count": 120
 }
