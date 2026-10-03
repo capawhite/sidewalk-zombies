@@ -53,6 +53,8 @@ window.addEventListener('pointerup', () => {
 });
 document.getElementById('shove')!.addEventListener('click', doShove);
 document.getElementById('start')!.addEventListener('click', () => start({ mode: 'free' }));
+document.getElementById('daily')?.addEventListener('click', () => start({ mode: 'daily', chapter: 1 }));
+document.getElementById('emptyHands')?.addEventListener('click', () => start({ mode: 'free', emptyHands: true, chapter: 1 }));
 document.getElementById('again')!.addEventListener('click', () => start({ mode: 'free' }));
 document.getElementById('continue')!.addEventListener('click', (e) => {
   e.stopPropagation();

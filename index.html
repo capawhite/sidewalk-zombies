@@ -22,7 +22,7 @@
           <div class="stat gold"><div class="k">Coins</div><div class="v" id="coins">0</div></div>
         </div>
           <div class="stat composure" style="text-align:right">
-          <div class="k">Composure · <span id="level">Lv 1</span></div>
+          <div class="k">Lv <span id="level">1</span></div>
           <div id="mood" class="mood mood-calm">Calm</div>
           <div id="lives"></div>
         </div>
@@ -59,7 +59,23 @@
             <button type="button" class="ghost" id="rivalSkip">Not now</button>
           </div>
         </div>
+        <div class="map-wrap">
+          <div class="map-label">City map</div>
+          <div class="city-map" id="cityMap"></div>
+        </div>
+        <div class="boost-wrap">
+          <div class="map-label">Run boosts <small>(spent when you Play)</small></div>
+          <div class="run-boosts" id="runBoosts"></div>
+        </div>
         <button class="play" id="start">Play</button>
+        <button type="button" class="play-daily" id="daily">Daily Sidewalk</button>
+        <button type="button" class="play-empty" id="emptyHands">Empty Hands</button>
+        <p class="daily-best" id="dailyBest">Daily Sidewalk · …</p>
+        <p class="empty-blurb">Empty Hands · shove only · vault bonus by distance</p>
+        <details class="locker">
+          <summary>Your Block</summary>
+          <div class="your-block" id="yourBlock"></div>
+        </details>
         <details class="locker">
           <summary>Locker <b id="shopVault">0¢</b></summary>
           <div class="shop" id="shop">

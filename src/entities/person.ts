@@ -218,10 +218,10 @@ export function applyPose(z: any, type: string) {
   const rig: Rig = d.rig;
   const name: PoseName =
     type === 'selfie' || type === 'photo' ? 'film'
-    : type === 'text' || type === 'nav' || type === 'scooter' ? 'text'
+    : type === 'text' || type === 'nav' || type === 'scooter' || type === 'delivery' ? 'text'
     : type === 'inf' ? 'inf'
     : type === 'scared' ? 'scared'
-    : 'talk'; // talk, couple, default
+    : 'talk'; // talk, couple, tour, dog, default
   const clips = rig.kit.poses[name];
   rig.mixer.stopAllAction();
   rig.pose = rig.mixer.clipAction(clips.pose).play();
@@ -238,7 +238,13 @@ export function applyPose(z: any, type: string) {
   } else rig.phoneAt = null;
   d.phone.visible = true;
   // Walk-cycle rate hints (scooters hustle; photographers saunter).
-  if (rig.walk) rig.walk.timeScale = type === 'scooter' ? 1.55 : type === 'photo' ? 0.85 : 1;
+  if (rig.walk) {
+    rig.walk.timeScale = type === 'scooter' || type === 'delivery' ? 1.55
+      : type === 'tour' ? 0.7
+      : type === 'dog' ? 1.15
+      : type === 'photo' ? 0.85
+      : 1;
+  }
   rig.mixer.update(0);
 }
 

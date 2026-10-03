@@ -29,6 +29,7 @@ export function updateTimers(dt: number) {
   if (G.invuln > 0) G.invuln -= dt;
   if (G.coinStreakT > 0) G.coinStreakT -= dt;
   wrap.classList.toggle('hot', G.gunT > 0);
+  wrap.classList.toggle('rage', FEATURE_RAGE && G.rageT > 0);
   if (G.cartRush > 0) { G.cartRush -= dt; if (G.cartRush < 0) G.cartRush = 0; }
   if (G.scareT > 0) {
     G.scareT -= dt;

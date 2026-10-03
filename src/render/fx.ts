@@ -58,5 +58,11 @@ export function popAt(x: number, y: number, z: number, text: string, color: stri
 export function screenFlash() {
   elFx.classList.remove('go'); void (elFx as HTMLElement).offsetWidth; elFx.classList.add('go');
 }
-export const FXC: any = { shove: 0xffffff, cart: 0x7fd0ff, horn: 0xffd24a, gun: 0xff8a2a, bomb: 0xff4466, chain: 0xffe27a };
-export const FXW: any = { shove: 'BONK!', cart: 'WHACK!', horn: 'HONK!', gun: 'PEW!', bomb: 'BOOM!', chain: 'CLANK!' };
+export const FXC: any = {
+  shove: 0xffffff, cart: 0x7fd0ff, horn: 0xffd24a, gun: 0xff8a2a, bomb: 0xff4466,
+  whistle: 0xa8e6ff, spray: 0x7ee08a, umbrella: 0xc9a0e8, chain: 0xffe27a,
+};
+export const FXW: any = {
+  shove: 'BONK!', cart: 'WHACK!', horn: 'HONK!', gun: 'PEW!', bomb: 'BOOM!',
+  whistle: 'MOVE!', spray: 'SLOW!', umbrella: 'BLOCK!', chain: 'CLANK!',
+};

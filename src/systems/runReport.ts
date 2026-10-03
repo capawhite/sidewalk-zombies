@@ -26,6 +26,11 @@ interface TitleRule {
 /** First matching rule wins — order is intentional (wildest → calmest → default). */
 const TITLE_RULES: TitleRule[] = [
   {
+    title: 'GATE AGENT APPROVED',
+    sub: 'You cleared the city. The phones did not.',
+    test: (s) => s.cause === 'escaped',
+  },
+  {
     title: 'SOCIETY HAS FAILED',
     sub: 'The sidewalk filed a restraining order',
     test: (s) => s.bonks >= 40 || s.bestCombo >= 14 || s.chaos >= 1200,
@@ -150,10 +155,41 @@ const DEATH: Record<string, string[]> = {
     'E-scooter energy. F-tier awareness.',
     'Whir. Thud. Review: would not ride again.',
   ],
+  delivery: [
+    'Hot bag. Cold awareness. You were the drop-off.',
+    'They were going the wrong way. So was your day.',
+    'App said "delivered." Reality said "collision."',
+    'Five-star rating for speed. Zero for looking up.',
+    'Reverse gear. Forward chaos.',
+    'Tip: none. Tip into you: absolute.',
+  ],
+  tour: [
+    'Follow the umbrella. Or don\'t. Either way: splat.',
+    'Group rate included complimentary wipeout.',
+    'They moved as one. You moved as the floor.',
+    'Photo stop was optional. Hitting you was not.',
+    'Flag in the air. Composure in the dirt.',
+    'Guided tour of your personal space.',
+  ],
+  dog: [
+    'The leash was short. Their attention was shorter.',
+    'Pup wanted a sniff. You became the hydrant.',
+    'Who walks who? Today: the leash decided.',
+    'Good boy. Bad spatial awareness.',
+    'Zigzag walk. Straight into you.',
+    'They stopped for the dog. Physics didn\'t.',
+  ],
   mall: [
     'You were the obstacle in someone\'s mall-map walking tour.',
     'Food-court GPS said "you have arrived." You had.',
     'Sale ends today. So did your composure.',
+  ],
+  escaped: [
+    'Boarding group: anyone who still has composure.',
+    'You made the gate. The phones made the problem.',
+    'City cleared. Sidewalk: undefeated elsewhere.',
+    'Passport: ready. Patience: expired at the cereal aisle.',
+    'You walked out. They never looked up to wave goodbye.',
   ],
 };
 
@@ -205,7 +241,9 @@ export function fillGameOver(s: RunSnapshot, rng: () => number): SharePayload {
   elTitle.textContent = cls.title;
   elClass.textContent = cls.sub;
   elMsg.textContent = msg;
-  elVerdict.textContent = s.newBest ? '★ NEW BEST ★' : 'RUN REPORT';
+  elVerdict.textContent = s.cause === 'escaped'
+    ? '★ CITY CLEARED ★'
+    : s.newBest ? '★ NEW BEST ★' : 'RUN REPORT';
 
   const set = (id: string, v: string | number, pb = false) => {
     const node = document.getElementById(id)!;

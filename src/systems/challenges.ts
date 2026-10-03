@@ -4,6 +4,7 @@
 // (never G.coins / score) so the replay harness stays untouched.
 import { flash } from '../hud/hud';
 import { G } from '../state';
+import { grantRandomCosmetic, syncVaultDom } from './cosmetics';
 
 export type ChalKind =
   | 'dist'
@@ -35,6 +36,7 @@ export const CHALLENGE_POOL: ChallengeDef[] = [
   { id: 'dist1200', label: 'Reach 1,200 metres', short: 'DISTANCE', kind: 'dist', target: 1200, reward: 35 },
   { id: 'combo10', label: 'Hit a ×10 combo', short: 'COMBO', kind: 'combo', target: 10, reward: 45 },
   { id: 'near15', label: 'Get 15 near misses', short: 'NEAR MISS', kind: 'near', target: 15, reward: 35 },
+  { id: 'empty600', label: 'Empty Hands: 600m shove-only', short: 'EMPTY', kind: 'dist', target: 600, reward: 50 },
 ];
 
 const LS_DAY = 'sz_chal_day';
@@ -147,11 +149,14 @@ function completeChallenge() {
   if (!QUIET) {
     G.vault += today.reward;
     try { localStorage.setItem('sz_vault', String(G.vault)); } catch { /* ignore */ }
-    const vaultEl = document.getElementById('vault');
-    if (vaultEl) vaultEl.textContent = String(G.vault);
-    const shopVault = document.getElementById('shopVault');
-    if (shopVault) shopVault.textContent = String(G.vault) + '¢';
-    flash('CHALLENGE CLEAR  +' + today.reward, '#f0d078');
+    syncVaultDom();
+    const prize = grantRandomCosmetic();
+    flash(
+      prize
+        ? 'CHALLENGE CLEAR  +' + today.reward + ' · UNLOCKED ' + prize.toUpperCase()
+        : 'CHALLENGE CLEAR  +' + today.reward,
+      '#f0d078',
+    );
   }
   paintChip();
   paintMenu();

@@ -5,7 +5,7 @@ import { playPower, sfxGun } from '../audio/sfx';
 import {
   CART_LAUNCH, COMBO_MULT_CAP, COMBO_SCORE_K, COMBO_WINDOW, FEATURE_RAGE,
   GUN_DURATION, GUN_STACK_MAX, GUN_START_INVULN, POWERS, RAGE_KNOCK_SCALE,
-  RAGE_SHOVE_CD_SCALE, SHOVE_HITSTOP, SHOVE_SHAKE,
+  RAGE_SHOVE_CD_SCALE, SHOVE_HITSTOP, SHOVE_SHAKE, SPRAY_SLOW_T,
 } from '../config';
 import { applyPose } from '../entities/person';
 import { batProp, gunProp, hornProp, player, scareRing } from '../entities/player';
@@ -15,6 +15,11 @@ import { FXC, FXW, fxBurst, hexCss, popAt, screenFlash } from '../render/fx';
 import { G, S, powerQ } from '../state';
 import { rand } from '../util';
 import { onChallengeBonk } from './challenges';
+import { shoveCdScale } from './composure';
+import { buzz } from './haptics';
+import { isEmptyHands } from './emptyHands';
+import { isEscalatorWeave } from './escalator';
+import { isLuggageClaim } from './luggage';
 
 export function fireGun() {
   const b = getBullet();
@@ -28,12 +33,18 @@ function peekPower(): string {
 }
 export function refreshPowerHud() {
   G.power = peekPower();
-  if (G.gunT <= 0) elShoveName.textContent = POWERS[G.power].name;
-  elShove.classList.remove('power-cart', 'power-horn', 'power-gun', 'power-bomb');
+  if (G.gunT <= 0) {
+    if (G.umbrellaCharges > 0 && G.power === 'shoulder') elShoveName.textContent = 'BLOCK READY';
+    else elShoveName.textContent = POWERS[G.power].name;
+  }
+  elShove.classList.remove('power-cart', 'power-horn', 'power-gun', 'power-bomb', 'power-whistle', 'power-spray', 'power-umbrella');
   if (G.power === 'cart') elShove.classList.add('power-cart');
   if (G.power === 'horn') elShove.classList.add('power-horn');
   if (G.power === 'gun') elShove.classList.add('power-gun');
   if (G.power === 'bomb') elShove.classList.add('power-bomb');
+  if (G.power === 'whistle') elShove.classList.add('power-whistle');
+  if (G.power === 'spray') elShove.classList.add('power-spray');
+  if (G.power === 'umbrella' || (G.umbrellaCharges > 0 && G.power === 'shoulder')) elShove.classList.add('power-umbrella');
   elShoveHint.textContent = 'SPACE';
   drawArsenal();
   batProp.visible = G.power === 'cart' || G.cartRush > 0;
@@ -47,6 +58,10 @@ export function setPower(next: string) {
   refreshPowerHud();
 }
 export function collectPower(kind: string) {
+  if (isEmptyHands()) {
+    flash('EMPTY HANDS — SHOVE ONLY', '#f0d078');
+    return;
+  }
   if (kind === 'gun' && G.gunT > 0) {
     startGun(true);
     return;
@@ -119,6 +134,15 @@ export function knockOff(z: any, dx: number, fx: string) {
   } else if (fx === 'bomb') {
     d.knockVx = (rand() - 0.5) * 22 * k;
     d.knockVy = (10 + rand() * 10) * (k > 1 ? 1.1 : 1);
+  } else if (fx === 'whistle') {
+    // Hard lateral shove — clear the player's lane without a full wipe.
+    d.knockVx = dir * (14 + rand() * 4) * k;
+    d.knockVy = 1.6;
+    applyPose(z, 'scared');
+  } else if (fx === 'umbrella') {
+    d.knockVx = dir * (11 + rand() * 3) * k;
+    d.knockVy = 2.2;
+    applyPose(z, 'scared');
   } else if (fx === 'chain') {
     d.knockVx = dir * (6 + rand() * 2.5);
     d.knockVy = 2.4;
@@ -181,6 +205,72 @@ function fireWeapon(kind: string) {
     refreshPowerHud();
     return;
   }
+  if (kind === 'whistle') {
+    playPower('whistle');
+    G.scareT = 0.35;
+    (scareRing.material as THREE.MeshBasicMaterial).color.setHex(0xa8e6ff);
+    scareRing.position.set(player.position.x, 0.08, player.position.z - 2);
+    const p = POWERS.whistle;
+    const laneHalf = p.halfW;
+    let got = 0;
+    for (const z of pool) {
+      if (!z.active || z.userData.knocked) continue;
+      const dz = z.position.z - player.position.z;
+      const dx = z.position.x - player.position.x;
+      // Anyone in the player's lane ahead — blow them sideways to open a path.
+      if (dz < 0.5 && dz > -p.reach && Math.abs(dx) < laneHalf) {
+        const side = Math.abs(dx) < 0.2
+          ? (z.position.x >= player.position.x ? 1 : -1)
+          : Math.sign(dx);
+        knockOff(z, side * 2, 'whistle');
+        got++;
+      }
+    }
+    if (got) registerBonk(got, 12, p.yell, '#a8e6ff');
+    else flash(p.yell, '#a8e6ff');
+    G.shake = Math.min(G.shake + p.shake, 0.85);
+    if (got) G.hitStop = 0.04;
+    G.fovKick = Math.max(G.fovKick, 2.5);
+    refreshPowerHud();
+    return;
+  }
+  if (kind === 'spray') {
+    playPower('spray');
+    G.scareT = 0.5;
+    (scareRing.material as THREE.MeshBasicMaterial).color.setHex(0x7ee08a);
+    scareRing.position.set(player.position.x, 0.08, player.position.z - 2);
+    const p = POWERS.spray;
+    let got = 0;
+    for (const z of pool) {
+      if (!z.active || z.userData.knocked) continue;
+      const dz = z.position.z - player.position.z;
+      const dx = z.position.x - player.position.x;
+      const hit = dz < 3 && dz > -p.reach && Math.hypot(dx, Math.min(0, dz)) < p.halfW;
+      if (hit) {
+        z.userData.slowT = SPRAY_SLOW_T;
+        got++;
+      }
+    }
+    if (got) {
+      G.scoreAcc += got * 4;
+      flash(p.yell + ' ×' + got, '#7ee08a');
+    } else flash(p.yell, '#7ee08a');
+    G.shake = Math.min(G.shake + p.shake, 0.7);
+    G.fovKick = Math.max(G.fovKick, 2);
+    refreshPowerHud();
+    return;
+  }
+  if (kind === 'umbrella') {
+    playPower('umbrella');
+    G.umbrellaCharges = Math.min(2, G.umbrellaCharges + 1);
+    G.scareT = 0.35;
+    (scareRing.material as THREE.MeshBasicMaterial).color.setHex(0xc9a0e8);
+    scareRing.position.set(player.position.x, 0.08, player.position.z - 1.2);
+    flash(G.umbrellaCharges > 1 ? 'UMBRELLA ×' + G.umbrellaCharges : 'UMBRELLA READY', '#c9a0e8');
+    G.shake = Math.min(G.shake + POWERS.umbrella.shake, 0.6);
+    refreshPowerHud();
+    return;
+  }
   const p = POWERS[kind];
   if (!p) return;
   playPower(kind);
@@ -212,21 +302,33 @@ function fireWeapon(kind: string) {
 export function doShove() {
   if (G.state !== S.play) return;
   if (G.gunT > 0) return;
+  // Luggage Claim / Escalator Weave: steer-only — shove button is a no-op.
+  if (isLuggageClaim() || isEscalatorWeave()) {
+    flash('STEER ONLY', '#f0d078');
+    buzz('light');
+    return;
+  }
   audioResume();
   const ready = peekPower();
+  if (isEmptyHands() && ready !== 'shoulder') {
+    // Strip any accidental queue; shove only.
+    powerQ.length = 0;
+    refreshPowerHud();
+  }
   if (ready === 'gun') {
     consumeReadyPower();
     startGun(false);
     return;
   }
-  if (ready === 'bomb' || ready === 'cart' || ready === 'horn') {
+  if (ready === 'bomb' || ready === 'cart' || ready === 'horn' || ready === 'whistle' || ready === 'spray' || ready === 'umbrella') {
     consumeReadyPower();
     fireWeapon(ready);
     return;
   }
   if (G.shoveCd > 0) return;
   const p = POWERS.shoulder;
-  const cdScale = FEATURE_RAGE && G.rageT > 0 ? RAGE_SHOVE_CD_SCALE : 1;
+  let cdScale = FEATURE_RAGE && G.rageT > 0 ? RAGE_SHOVE_CD_SCALE : 1;
+  cdScale *= shoveCdScale();
   G.shoveCd = p.cd * cdScale; G.lastCd = G.shoveCd;
   playPower('shoulder');
   let got = 0;
@@ -239,7 +341,25 @@ export function doShove() {
     registerBonk(got, 15, p.yell, 'var(--accent)');
     G.hitStop = Math.max(G.hitStop, SHOVE_HITSTOP);
     G.fovKick = Math.max(G.fovKick, 3.5);
+    buzz('medium');
+  } else {
+    buzz('light');
   }
   G.shake = Math.min(G.shake + (got ? SHOVE_SHAKE : p.shake), 0.9);
 }
 export function score(n: number) { G.scoreAcc += n; }
+
+/** Absorb one frontal hit with an armed umbrella. Returns true if blocked. */
+export function tryUmbrellaBlock(z: any, dx: number): boolean {
+  if (G.umbrellaCharges <= 0) return false;
+  G.umbrellaCharges--;
+  G.invuln = Math.max(G.invuln, 0.55);
+  G.shake = Math.min(G.shake + 0.35, 0.85);
+  G.fovKick = Math.max(G.fovKick, 3);
+  knockOff(z, dx, 'umbrella');
+  registerBonk(1, 18, 'BLOCK!', '#c9a0e8');
+  buzz('medium');
+  playPower('umbrella');
+  refreshPowerHud();
+  return true;
+}

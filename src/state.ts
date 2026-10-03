@@ -21,6 +21,7 @@ export const G = {
   lateralSpeed: 0, // recent |dx/dt| for near-miss anti-farm
   // powers
   shoveCd: 0, lastCd: POWERS.shoulder.cd, power: 'shoulder', cartRush: 0, gunT: 0, gunCd: 0, scareT: 0,
+  umbrellaCharges: 0, // armed blocks remaining (Umbrella weapon)
   // player and input
   vx: 0, lean: 0, tapLeft: 0, tapRight: 0, hopT: 0,
   pointerActive: false, pointerX: 0, pointerOriginX: 0, touchAnchorX: 0,

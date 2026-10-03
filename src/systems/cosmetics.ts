@@ -56,6 +56,23 @@ export const COSMETICS: CosmoItem[] = [
     id: 'look_biz', kind: 'look', name: 'Businessperson', blurb: 'Late to a meeting that could\'ve been a bonk.',
     price: 80, body: 'man', skin: 0xe0b090, shirt: 0x1e2a44, pants: 0x1a2030, hair: 0x2a2218, shoes: 0x111111, cap: false,
   },
+  {
+    id: 'look_goth', kind: 'look', name: 'Mall Goth', blurb: 'Black everything. Still on TikTok.',
+    price: 65, body: 'woman', skin: 0xe8c8b8, shirt: 0x1a1a22, pants: 0x121218, hair: 0x1a1020, shoes: 0x2a2a2a, cap: false,
+  },
+  {
+    id: 'look_skater', kind: 'look', name: 'Skater', blurb: 'Pads optional. Awareness optional.',
+    price: 60, body: 'man', skin: 0xd8a878, shirt: 0x3ecf8e, pants: 0x4a4038, hair: 0x3a2a1a, shoes: 0xffffff, cap: true,
+  },
+  // —— seasonal looks ——
+  {
+    id: 'look_pumpkin', kind: 'look', name: 'Pumpkin Patch', blurb: 'Seasonal orange menace.',
+    price: 75, body: 'man', skin: 0xf0c4a0, shirt: 0xe87a20, pants: 0x3a2a18, hair: 0x2a1a10, shoes: 0x1a1a1a, cap: true,
+  },
+  {
+    id: 'look_sweater', kind: 'look', name: 'Ugly Sweater', blurb: 'Festive. Aggressive.',
+    price: 80, body: 'man', skin: 0xe8b890, shirt: 0xc42a2a, pants: 0x1a3a28, hair: 0x3a2a1a, shoes: 0xffffff, cap: false,
+  },
   // —— bonk props ——
   { id: 'bonk_bat', kind: 'bonk', name: 'Metal Bat', blurb: 'Classic aisle justice.', price: 0 },
   { id: 'bonk_baguette', kind: 'bonk', name: 'Baguette', blurb: 'Artisanal blunt force.', price: 45 },
@@ -63,12 +80,18 @@ export const COSMETICS: CosmoItem[] = [
   { id: 'bonk_foam', kind: 'bonk', name: 'Foam Finger', blurb: '#1 at making space.', price: 40 },
   { id: 'bonk_paper', kind: 'bonk', name: 'Newspaper', blurb: 'Extra! Extra! Outta my way!', price: 35 },
   { id: 'bonk_noodle', kind: 'bonk', name: 'Pool Noodle', blurb: 'Soft. Humiliating.', price: 50 },
+  { id: 'bonk_pan', kind: 'bonk', name: 'Frying Pan', blurb: 'Seasoned with chaos.', price: 70 },
+  { id: 'bonk_candy', kind: 'bonk', name: 'Candy Cane', blurb: 'Seasonal. Sticky justice.', price: 60 },
+  { id: 'bonk_corn', kind: 'bonk', name: 'Candy Corn Bat', blurb: 'Tri-color trauma.', price: 55 },
   // —— horns ——
   { id: 'horn_classic', kind: 'horn', name: 'Clown Horn', blurb: 'The original beep-boop.', price: 0 },
   { id: 'horn_bike', kind: 'horn', name: 'Bike Bell', blurb: 'Polite. Ignored.', price: 30 },
   { id: 'horn_air', kind: 'horn', name: 'Air Horn', blurb: 'Stadium energy, aisle scale.', price: 65 },
   { id: 'horn_goose', kind: 'horn', name: 'Goose Honk', blurb: 'Nature\'s car alarm.', price: 55 },
   { id: 'horn_excuse', kind: 'horn', name: 'EXCUSE ME!', blurb: 'The nuclear option.', price: 75 },
+  { id: 'horn_train', kind: 'horn', name: 'Train Horn', blurb: 'Platform energy. Zero chill.', price: 85 },
+  { id: 'horn_jingle', kind: 'horn', name: 'Jingle Bell', blurb: 'Seasonal. Relentless.', price: 70 },
+  { id: 'horn_witch', kind: 'horn', name: 'Witch Cackle', blurb: 'Heeheehee — MOVE.', price: 70 },
 ];
 
 export interface EquipState {
@@ -166,6 +189,17 @@ export function syncVaultDom() {
   if (s) s.textContent = String(G.vault) + '¢';
 }
 
+/** Grant one unowned paid cosmetic (meta RNG — not game rand). */
+export function grantRandomCosmetic(): string | null {
+  const pool = COSMETICS.filter((c) => c.price > 0 && !owned.has(c.id));
+  if (!pool.length) return null;
+  const item = pool[(Math.random() * pool.length) | 0];
+  owned.add(item.id);
+  save();
+  syncVaultDom();
+  return item.name;
+}
+
 // ---------- bonk prop builders (visual only) ----------
 function clearGroup(g: THREE.Group) {
   while (g.children.length) g.remove(g.children[0]);
@@ -207,6 +241,29 @@ export function buildBonkModel(id: string): THREE.Group {
     noodle.position.y = 0.65; add(noodle);
     const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.08, 10), mat(0xffffff));
     stripe.position.y = 0.65; add(stripe);
+  } else if (id === 'bonk_pan') {
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.55, 8), mat(0x2a2a2a));
+    handle.position.set(0, 0.35, 0); add(handle);
+    const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.08, 12), mat(0x4a4a52));
+    pan.position.y = 0.72; add(pan);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.03, 6, 14), mat(0x6a6a72));
+    rim.rotation.x = Math.PI / 2; rim.position.y = 0.76; add(rim);
+  } else if (id === 'bonk_candy') {
+    const cane = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 1.05, 10), mat(0xfff0f0));
+    cane.position.y = 0.55; add(cane);
+    const stripeA = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.12, 10), mat(0xe02020));
+    stripeA.position.y = 0.35; add(stripeA);
+    const stripeB = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.12, 10), mat(0xe02020));
+    stripeB.position.y = 0.7; add(stripeB);
+    const hook = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.05, 6, 12, Math.PI), mat(0xfff0f0));
+    hook.position.set(0.12, 1.1, 0); hook.rotation.z = Math.PI / 2; add(hook);
+  } else if (id === 'bonk_corn') {
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.35, 8), mat(0xfff0a0));
+    tip.position.y = 1.05; add(tip);
+    const mid = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.4, 8), mat(0xff8a2a));
+    mid.position.y = 0.7; add(mid);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.35, 8), mat(0xffffff));
+    base.position.y = 0.35; add(base);
   } else {
     // default metal bat
     const tape = mat(0x2a241c);

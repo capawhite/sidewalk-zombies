@@ -55,9 +55,15 @@ export const CAM_FOLLOW_RATE = 6;
 export const FOG_NEAR = 28;
 export const FOG_FAR = 72;
 export const SPEED = 6.5;
-                // walk stays put — crowd is the ramp
+                // base walk — ramps with distance
+export const SPEED_MAX = 8.0;
+             // soft ceiling so late run tightens without becoming a sprint
+export const SPEED_RAMP_DIST = 2800;
+      // metres from 0 to reach SPEED_MAX
 export const CROWD_RAMP_DIST = 560;
       // metres to go from 1 person to a full wave
+export const CROWD_RAMP_DIST_2 = 2200;
+    // second density squeeze toward max fill
 export const SPAWN_FILL_START = 1;
 export const SPAWN_FILL_END = 4;
 export const SPAWN_GAP = 1.1;
@@ -74,7 +80,12 @@ export const POWERS: any = {
   horn:     { name: 'HORN',  yell: 'HONK!', cd: 3.6, reach: 10, halfW: 7.2, shake: 0.35, radial: true },
   gun:      { name: 'GUN',   yell: 'GUN!', cd: 0, reach: 0, halfW: 0, shake: 0.15 },
   bomb:     { name: 'BOMB',  yell: 'BOOM!', cd: 5, reach: 99, halfW: 99, shake: 0.8 },
+  whistle:  { name: 'WHISTLE', yell: 'MOVE!', cd: 3.2, reach: 12, halfW: 2.4, shake: 0.3 },
+  spray:    { name: 'SPRAY', yell: 'SLOW!', cd: 3.8, reach: 14, halfW: 5.5, shake: 0.22, radial: true },
+  umbrella: { name: 'UMBRELLA', yell: 'BLOCK!', cd: 3.4, reach: 0, halfW: 0, shake: 0.2 },
 };
+export const SPRAY_SLOW_T = 3.2;          // how long sprayed zombies crawl
+export const SPRAY_SLOW_SCALE = 0.32;     // approach-speed multiplier while slowed
 export const LIVES_MAX = 5;
 export const TALK_DRIFT = 2.2;
 export const TALK_DRIFT_RATE = 1.55;
@@ -132,6 +143,12 @@ export const PHOTO_WOBBLE = 0.12;          // slight sway while backing up
 /** Chance a walkable NPC faces the same way as the player (talk/text/selfie/inf/couple). Photos always do. */
 export const FACE_AWAY_CHANCE = 0.42;
 export const SCOOTER_EXTRA = 2.6;          // extra approach speed (m/s toward camera)
+export const DELIVERY_EXTRA = 3.1;         // delivery bikes close faster than scooters
+export const DELIVERY_WEAVE = 2.8;         // hard lateral weave amplitude
+export const TOUR_GAP = 0.72;              // spacing inside a tour-group blob
+export const TOUR_HIT_HALF_W = 1.35;       // slightly fat hit for tour walkers
+export const DOG_LEASH = 1.35;             // max walker↔pup gap before tug
+export const DOG_HIT_HALF_W = 1.45;        // leash makes the pair a wide threat
 export const COUPLE_GAP = 0.58;            // half-spacing between linked partners
 export const HIT_HALF_W = 1.15;            // default player-collision half-width
 export const SCOOTER_HIT_HALF_W = 1.05;
@@ -155,7 +172,7 @@ export const EVT_NEWPHONE_FILL = 1;        // extra lane fill (still capped unde
 export const STAGES: any[] = [
   {
     id: 1, name: 'CEREAL AISLE', world: 'aisle', crowd: 'aisle', clearAt: 1000,
-    kit: ['cart', 'horn', 'bomb'],
+    kit: ['cart', 'horn'],
     curtain: {
       kicker: '★ AISLE ACE ★', title: 'YOU MADE IT!',
       sub: "Cereal's cleared. Next: the boardwalk — ring lights, tripods, and people who think you're a lamp post.",
@@ -164,7 +181,7 @@ export const STAGES: any[] = [
   },
   {
     id: 2, name: 'THE BOARDWALK', world: 'street', crowd: 'inf', clearAt: 2200,
-    kit: ['gun', 'cart', 'bomb'],
+    kit: ['gun', 'cart'],
     curtain: {
       kicker: '★ BOARDWALK STAR ★', title: 'INFLUENCED!',
       sub: "You survived the selfies. Next: the food court — coupons, GPS, and folks who walk like the map is the floor.",
@@ -173,7 +190,7 @@ export const STAGES: any[] = [
   },
   {
     id: 3, name: 'FOOD COURT', world: 'mall', crowd: 'mall', clearAt: 3600,
-    kit: ['horn', 'gun', 'bomb'],
+    kit: ['horn', 'gun', 'spray'],
     curtain: {
       kicker: '★ MALL RAT ★', title: 'SALE SURVIVED!',
       sub: "Food-court cleared. Next: the beach — towels, umbrellas, and phones brighter than the sun.",
@@ -182,7 +199,7 @@ export const STAGES: any[] = [
   },
   {
     id: 4, name: 'THE BEACH', world: 'beach', crowd: 'beach', clearAt: 5200,
-    kit: ['cart', 'horn', 'gun'],
+    kit: ['cart', 'horn', 'gun', 'spray'],
     curtain: {
       kicker: '★ BEACH BUM ★', title: 'SUNBURN SURVIVED!',
       sub: "Sand's cleared. Next: the parking garage — stall hunts, reverse cams, and people who brake for a bar of signal.",
@@ -191,7 +208,7 @@ export const STAGES: any[] = [
   },
   {
     id: 5, name: 'PARKING GARAGE', world: 'garage', crowd: 'garage', clearAt: 7000,
-    kit: ['horn', 'gun', 'bomb'],
+    kit: ['horn', 'gun', 'bomb', 'umbrella'],
     curtain: {
       kicker: '★ VALIDATED ★', title: 'TICKET CLEARED!',
       sub: "Garage survived. Next: the train station — delayed trains, yellow lines, and folks who live on the arrivals board.",
@@ -200,7 +217,7 @@ export const STAGES: any[] = [
   },
   {
     id: 6, name: 'TRAIN STATION', world: 'station', crowd: 'station', clearAt: 9000,
-    kit: ['cart', 'horn', 'gun'],
+    kit: ['cart', 'horn', 'gun', 'whistle', 'umbrella'],
     curtain: {
       kicker: '★ ON TIME ★', title: 'PLATFORM CLEARED!',
       sub: "Station survived. Finale: the airport — departure boards, luggage piles, and scooters that think they're planes.",
@@ -208,9 +225,13 @@ export const STAGES: any[] = [
     },
   },
   {
-    id: 7, name: 'THE AIRPORT', world: 'airport', crowd: 'airport', clearAt: 0,
-    kit: ['horn', 'gun', 'bomb'],
-    curtain: null,
+    id: 7, name: 'THE AIRPORT', world: 'airport', crowd: 'airport', clearAt: 12000,
+    kit: ['horn', 'gun', 'bomb', 'whistle'],
+    curtain: {
+      kicker: '★ GATE CLEARED ★', title: 'YOU ESCAPED!',
+      sub: "Boarding pass: valid. Composure: questionable. The sidewalk will still be there tomorrow.",
+      go: 'Walk out →',
+    },
   },
 ];
 export const TYPES: any = {
@@ -223,4 +244,7 @@ export const TYPES: any = {
   photo: { color: 0xb07aff },     // purple: walks backward into you
   couple: { color: 0xff7eb9 },    // pink: linked pair, extra width
   scooter: { color: 0x5fe0a0 },   // mint: closes distance faster
+  delivery: { color: 0xff8a2a },  // orange: reverse-lane bike weaving hard
+  tour: { color: 0xf0d078 },      // gold: slow blob of linked walkers
+  dog: { color: 0xc4a574 },       // tan: walker + pup on a short leash
 };

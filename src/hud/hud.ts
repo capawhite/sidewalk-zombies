@@ -1,6 +1,6 @@
 // HUD elements and drawing helpers.
 import { muted, toggleMute } from '../audio/engine';
-import { sfxBanner } from '../audio/sfx';
+import { sfxBanner, sfxChapterSting } from '../audio/sfx';
 import { LIVES_MAX, POWERS } from '../config';
 import { G, powerQ, stageOf } from '../state';
 
@@ -43,6 +43,7 @@ export function showBanner() {
   elBName.style.color = '';
   elBanner.classList.remove('show'); void (elBanner as HTMLElement).offsetWidth; elBanner.classList.add('show');
   sfxBanner();
+  sfxChapterSting(G.level);
 }
 /** Short arcade announcement for Stage 2B set pieces (reuses the level banner). */
 export function showEncounter(kicker: string, title: string, color = '#ffe27a') {
@@ -91,8 +92,14 @@ export function showCombo(label: string) {
 export function drawArsenal() {
   const list = G.gunT > 0 ? ['gun', ...powerQ] : powerQ.slice();
   elArsenal.innerHTML = '';
-  if (!list.length) { elArsenal.classList.add('hide'); return; }
   elArsenal.classList.remove('hide');
+  if (!list.length) {
+    const d = document.createElement('div');
+    d.className = 'slot slot-shoulder next';
+    d.textContent = 'SHOVE';
+    elArsenal.appendChild(d);
+    return;
+  }
   for (let i = 0; i < list.length; i++) {
     const k = list[i];
     const d = document.createElement('div');

@@ -7,10 +7,15 @@ import { camera, wrap } from './render/renderer';
 import { flapSeagulls } from './scene/seagulls';
 import { scrollWorld } from './scene/worlds';
 import { updateParts } from './render/fx';
-import { SPEED } from './config';
+import { SPEED, SPEED_MAX, SPEED_RAMP_DIST } from './config';
 import { G, S, stageOf } from './state';
+import { updateBonus, isBonusRush } from './systems/bonus';
 import { updateCamera } from './systems/camera';
+import { updateComposurePayoffs } from './systems/composure';
 import { beginClear } from './systems/levels';
+import { isEscalatorWeave, updateEscalator } from './systems/escalator';
+import { isLuggageClaim, updateLuggage } from './systems/luggage';
+import { isPhotobomb, updatePhotobomb } from './systems/photobomb';
 import { updatePickups, updateCoins } from './systems/pickups';
 import { updateBullets } from './systems/projectiles';
 import { updateEncounters } from './systems/encounters';
@@ -19,6 +24,7 @@ import { updateChallenges } from './systems/challenges';
 import { updateDailyHud } from './systems/daily';
 import { updateFriendChallenge } from './systems/friendChallenge';
 import { updateSpawns } from './systems/spawn';
+import { tickSoftCrowd } from './systems/economy';
 import { updatePlayer } from './systems/steering';
 import { updateTimers } from './systems/timers';
 import { updateZombies } from './systems/zombies';
@@ -55,7 +61,10 @@ export function frame(dt: number, now: number) {
   if (G.hitStop > 0) { G.hitStop -= dt; dt *= 0.06; }
 
   if (G.state === S.play) {
-    G.speed = SPEED;
+    const ramp = Math.min(1, G.dist / SPEED_RAMP_DIST);
+    G.speed = SPEED + (SPEED_MAX - SPEED) * ramp;
+    const mini = isBonusRush() || isLuggageClaim() || isPhotobomb() || isEscalatorWeave();
+    if (mini) G.speed = Math.min(G.speed, SPEED + 0.4);
     G.dist += G.speed * dt;
     const total = Math.floor(G.dist) + G.scoreAcc;
     drawMetres();
@@ -65,9 +74,17 @@ export function frame(dt: number, now: number) {
 
     updatePlayer(dt, now);
     scrollWorld(G.speed * dt);
-    updateSpawns(dt);
-    updateEncounters(dt);
-    updateEvents(dt);
+    tickSoftCrowd(dt);
+    updateBonus(dt);
+    updateLuggage(dt);
+    updatePhotobomb(dt);
+    updateEscalator(dt);
+    updateComposurePayoffs(dt);
+    if (!isLuggageClaim() && !isPhotobomb() && !isEscalatorWeave()) updateSpawns(dt);
+    if (!isBonusRush() && !isLuggageClaim() && !isPhotobomb() && !isEscalatorWeave()) {
+      updateEncounters(dt);
+      updateEvents(dt);
+    }
     updateChallenges();
     updateFriendChallenge();
     updateDailyHud();
@@ -82,7 +99,7 @@ export function frame(dt: number, now: number) {
   if (G.state !== S.play) scrollWorld(1.4 * dt);
   flapSeagulls(dt, now);
   updateParts(dt);
-  if (G.state !== S.play) wrap.classList.remove('hot');
+  if (G.state !== S.play) { wrap.classList.remove('hot'); wrap.classList.remove('rage'); }
   if (G.fovKick > 0) G.fovKick = Math.max(0, G.fovKick - dt * 24);
   const wantFov = G.baseFov + G.fovKick;
   if (Math.abs(camera.fov - wantFov) > 0.01) { camera.fov = wantFov; camera.updateProjectionMatrix(); }

@@ -1,11 +1,11 @@
 // Zombie movement, knock-back physics, collisions, chain reactions and near-miss scoring.
-import { sfxBump, sfxNear } from '../audio/sfx';
+import { sfxBump, sfxNear, sfxNearBreak, sfxRage } from '../audio/sfx';
 import {
   CART_GRAVITY, CHAIN_MAX_PER_FRAME, CHAIN_RADIUS, CHAIN_SCORE, CLAMP_X,
-  FEATURE_RAGE, HIT_HALF_W, INF_DRIFT, INF_DRIFT_RATE, NAV_LANE_STEP, NAV_SPIN_T,
-  NAV_TURN_MAX, NAV_TURN_MIN, NEAR_MISS_GAP, NEAR_MISS_SCORE, NEAR_MISS_STEER,
-  NEAR_MISS_STREAK_K, PHOTO_WOBBLE, RAGE_DURATION, SCOOTER_EXTRA, TALK_DRIFT,
-  TALK_DRIFT_RATE,
+  DELIVERY_EXTRA, DELIVERY_WEAVE, DOG_LEASH, FEATURE_RAGE, HIT_HALF_W, INF_DRIFT, INF_DRIFT_RATE,
+  NAV_LANE_STEP, NAV_SPIN_T, NAV_TURN_MAX, NAV_TURN_MIN, NEAR_MISS_GAP, NEAR_MISS_SCORE,
+  NEAR_MISS_STEER, NEAR_MISS_STREAK_K, PHOTO_WOBBLE, RAGE_DURATION, SCOOTER_EXTRA,
+  SPRAY_SLOW_SCALE, TALK_DRIFT, TALK_DRIFT_RATE,
 } from '../config';
 import { animatePerson, setHeadSway } from '../entities/person';
 import { player } from '../entities/player';
@@ -15,7 +15,9 @@ import { G, slotsX } from '../state';
 import { clamp, rand } from '../util';
 import { eventIsNoSignal, eventPull } from './events';
 import { gameOver } from './lifecycle';
-import { knockOff, registerBonk, resetCombo, score } from './powers';
+import { knockOff, registerBonk, resetCombo, score, tryUmbrellaBlock } from './powers';
+import { buzz } from './haptics';
+import { noteChapterLifeLost, noteChapterNearMiss } from './progress';
 
 const nearMissLines = [
   'TOO CLOSE',
@@ -88,11 +90,11 @@ export function updateZombies(dt: number, now: number) {
         z.rotation.x += dt * 7;
         z.rotation.z += dt * 9;
         if (z.position.y > 22 || z.position.y < -1 || d.tripT > 2.2) { z.active = false; z.visible = false; }
-      } else if (d.fx === 'horn') {
+      } else if (d.fx === 'horn' || d.fx === 'whistle' || d.fx === 'umbrella') {
         z.position.x += d.knockVx * dt;
         z.position.z += G.speed * dt * 0.35;
         z.position.y = Math.abs(Math.sin(d.tripT * 22)) * 0.18;
-        z.rotation.y += dt * 10;
+        z.rotation.y += dt * (d.fx === 'whistle' ? 14 : d.fx === 'umbrella' ? 8 : 10);
         if (d.tripT > 0.95 || Math.abs(z.position.x) > 13) { z.active = false; z.visible = false; }
       } else {
         z.position.x += d.knockVx * dt;
@@ -106,9 +108,15 @@ export function updateZombies(dt: number, now: number) {
       continue;
     }
 
-    // Approach speed: scooters close the gap faster.
-    const approach = G.speed + (d.type === 'scooter' ? SCOOTER_EXTRA : 0);
-    z.position.z += approach * dt;
+    // Approach speed: scooters / deliveries close the gap faster; tour groups drift slower.
+    if (d.slowT > 0) d.slowT = Math.max(0, d.slowT - dt);
+    let approach = G.speed
+      + (d.type === 'scooter' ? SCOOTER_EXTRA : 0)
+      + (d.type === 'delivery' ? DELIVERY_EXTRA : 0)
+      + (d.type === 'tour' ? -1.1 : 0)
+      + (d.type === 'dog' && d.isPup ? 0.4 : 0);
+    if (d.slowT > 0) approach *= SPRAY_SLOW_SCALE;
+    z.position.z += Math.max(G.speed * 0.35, approach) * dt;
 
     // Stage 3: No Signal — everyone walks like a person for a few seconds.
     if (eventIsNoSignal() && G.gunT <= 0) {
@@ -131,6 +139,47 @@ export function updateZombies(dt: number, now: number) {
       z.rotation.y = 0;
       z.rotation.z = Math.sin(now * 0.02 + d.driftPhase) * 0.08;
       setHeadSway(z, 0.2, 0, 0);
+    } else if (d.type === 'delivery') {
+      // Reverse-lane bike: faces with player, weaves hard across lanes.
+      d.driftPhase += dt * 2.4;
+      z.position.x = d.baseX + Math.sin(d.driftPhase) * DELIVERY_WEAVE;
+      z.position.x = clamp(z.position.x, -CLAMP_X, CLAMP_X);
+      z.rotation.y = Math.PI + Math.sin(d.driftPhase) * 0.55;
+      z.rotation.z = Math.sin(now * 0.03 + d.driftPhase) * 0.12;
+      setHeadSway(z, 0.1, Math.sin(d.driftPhase) * 0.1, 0);
+    } else if (d.type === 'tour') {
+      // Slow blob: ease toward baseX; lean toward linked neighbour.
+      z.position.x += (d.baseX - z.position.x) * Math.min(1, dt * 3);
+      z.rotation.y = faceBase(d);
+      if (d.link && d.link.active) {
+        const toward = Math.sign(d.link.position.x - z.position.x) * 0.16;
+        setHeadSway(z, 0, toward, 0);
+      }
+    } else if (d.type === 'dog') {
+      // Walker weaves; pup is tugged back if the leash stretches.
+      if (!d.isPup) {
+        d.driftPhase += dt * TALK_DRIFT_RATE * 1.1;
+        d.baseX = clamp(d.baseX + Math.sin(d.driftPhase) * 0.012, -CLAMP_X, CLAMP_X);
+        z.position.x = d.baseX + Math.sin(d.driftPhase) * TALK_DRIFT * 0.7;
+        z.position.x = clamp(z.position.x, -CLAMP_X, CLAMP_X);
+        z.rotation.y = faceBase(d) + Math.sin(d.driftPhase) * 0.35;
+      } else {
+        z.rotation.y = faceBase(d);
+        if (d.link && d.link.active) {
+          const lx = d.link.position.x - z.position.x;
+          const lz = d.link.position.z - z.position.z;
+          const dist = Math.hypot(lx, lz);
+          const maxL = d.leashLen || DOG_LEASH;
+          if (dist > maxL) {
+            const pull = (dist - maxL) / dist;
+            z.position.x += lx * pull;
+            z.position.z += lz * pull * 0.35;
+          } else {
+            z.position.x += (d.link.position.x + Math.sin(now * 0.008) * 0.4 - z.position.x) * Math.min(1, dt * 4);
+          }
+        }
+      }
+      setHeadSway(z, d.isPup ? 0.25 : 0, 0, 0);
     } else if (d.type === 'couple') {
       // Linked pair: stay on baseX; soft lean toward partner when present.
       z.position.x = d.baseX;
@@ -171,8 +220,10 @@ export function updateZombies(dt: number, now: number) {
     // Visual only: people the camera has already passed keep simulating, but their mixer can rest.
     if (z.position.z < 12) {
       const amt = d.type === 'selfie' ? 0.05
-        : d.type === 'scooter' ? 0.75
+        : d.type === 'scooter' || d.type === 'delivery' ? 0.75
         : d.type === 'photo' ? 0.4
+        : d.type === 'tour' ? 0.22
+        : d.type === 'dog' ? (d.isPup ? 0.9 : 0.4)
         : d.type === 'text' || d.type === 'nav' ? 0.5
         : d.type === 'inf' ? 0.28
         : 0.35;
@@ -189,20 +240,29 @@ export function updateZombies(dt: number, now: number) {
     if (!d.hit && Math.abs(dz) < 1.05 && Math.abs(dx) < halfW) {
       d.hit = true;
       if (G.invuln <= 0) {
-        G.lives--;
-        resetCombo();
-        G.nearMissStreak = 0;
-        G.invuln = 1.1;
-        G.shake = Math.min(G.shake + 0.6, 0.9);
-        drawLives();
-        updateComposure();
-        sfxBump();
-        knockOff(z, dx, 'shove');
+        if (tryUmbrellaBlock(z, dx)) {
+          // Frontal bump absorbed — no composure loss.
+        } else {
+          G.lives--;
+          noteChapterLifeLost();
+          resetCombo();
+          G.nearMissStreak = 0;
+          G.invuln = 1.1;
+          G.shake = Math.min(G.shake + 0.6, 0.9);
+          drawLives();
+          updateComposure();
+          sfxBump();
+          buzz('error');
+          knockOff(z, dx, 'shove');
+          if (G.lives === 1) flash('LOSING IT — SHOVE FASTER', '#ff4466');
         if (FEATURE_RAGE && G.lives === 1 && G.rageT <= 0) {
           G.rageT = RAGE_DURATION;
           flash('LOSING IT', '#ff4466');
+          sfxRage();
+          buzz('heavy');
         }
-        if (G.lives <= 0) gameOver(d.type);
+          if (G.lives <= 0) gameOver(d.type);
+        }
       }
     }
     if (!d.passed && z.position.z > pz + 0.6) {
@@ -213,13 +273,17 @@ export function updateZombies(dt: number, now: number) {
         if (gap < NEAR_MISS_GAP && weaving) {
           G.nearMisses++;
           G.nearMissStreak++;
+          noteChapterNearMiss(G.nearMissStreak);
           const bonus = NEAR_MISS_SCORE + Math.min(G.nearMissStreak, 12) * NEAR_MISS_STREAK_K;
           score(bonus);
           const line = nearMissLines[Math.min(nearMissLines.length - 1, G.nearMissStreak - 1)]
             + (G.nearMissStreak >= 2 ? ' ×' + G.nearMissStreak : '');
           flash(line + '  +' + bonus, gap < 1.0 ? 'var(--accent)' : 'var(--talk)');
           sfxNear(G.nearMissStreak);
+          if (G.nearMissStreak === 1 || G.nearMissStreak % 3 === 0) buzz('light');
+          else if (G.nearMissStreak >= 5 && G.nearMissStreak % 2 === 0) buzz('medium');
         } else {
+          if (G.nearMissStreak >= 3) sfxNearBreak(G.nearMissStreak);
           G.nearMissStreak = 0;
         }
       }
